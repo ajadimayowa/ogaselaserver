@@ -1,0 +1,56 @@
+using Ogasela.Shared;
+
+namespace Ogasela.Application.Listings;
+
+public static class ListingErrors
+{
+    public static readonly Error SellerProfileNotFound = new(
+        "Listing.SellerProfileNotFound", "No seller profile was found for the current user.");
+
+    public static readonly Error ListingNotFound = new(
+        "Listing.NotFound", "The listing could not be found.");
+
+    public static readonly Error NotOwner = new(
+        "Listing.NotOwner", "You do not own this listing.");
+
+    public static readonly Error CategoryNotFound = new(
+        "Listing.CategoryNotFound", "The specified category could not be found.");
+
+    public static readonly Error PromotionPlanNotFound = new(
+        "Listing.PromotionPlanNotFound", "The specified promotion plan could not be found.");
+
+    public static readonly Error MediaLimitExceeded = new(
+        "Listing.MediaLimitExceeded", "The number of media items exceeds the selected plan's photo limit.");
+
+    public static readonly Error InvalidStatusForUpdate = new(
+        "Listing.InvalidStatusForUpdate", "A listing can only be edited while it is a Draft or Active.");
+
+    public static readonly Error InvalidStatusForPublish = new(
+        "Listing.InvalidStatusForPublish", "Only a Draft listing can be published. Use repost for a listing that has already been published before.");
+
+    public static readonly Error InvalidStatusForRepost = new(
+        "Listing.InvalidStatusForRepost", "Only an Expired, Sold, or Paused listing can be reposted.");
+
+    public static readonly Error InvalidStatusForPause = new(
+        "Listing.InvalidStatusForPause", "Only an Active or ExpiringSoon listing can be paused.");
+
+    public static readonly Error InvalidStatusForMarkSold = new(
+        "Listing.InvalidStatusForMarkSold", "Only an Active, ExpiringSoon, or Paused listing can be marked sold.");
+
+    // RULE-01 through RULE-06 from PRS Section 5 (RULE-03, the media-limit check, is instead
+    // enforced up front on Create/Update - see MediaLimitExceeded above).
+    public static readonly Error NotVerified = new(
+        "Listing.NotVerified", "The seller must complete biometric verification before publishing.");
+
+    public static readonly Error NoPlanSelected = new(
+        "Listing.NoPlanSelected", "A promotion plan must be selected before publishing.");
+
+    public static readonly Error CategoryNotFreeEligible = new(
+        "Listing.CategoryNotFreeEligible", "This category is not eligible for the Free plan.");
+
+    public static readonly Error FreePlanCapReached = new(
+        "Listing.FreePlanCapReached", "You have reached the maximum number of active Free-plan listings.");
+
+    public static readonly Error PaymentFailed = new(
+        "Listing.PaymentFailed", "Payment for the selected plan was not authorized.");
+}

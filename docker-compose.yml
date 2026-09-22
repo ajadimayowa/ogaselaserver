@@ -1,0 +1,76 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: src/Ogasela.Api/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=ogasela;Username=ogasela;Password=ogasela"
+      ConnectionStrings__Redis: "redis:6379"
+      Jwt__Secret: "${JWT_SECRET:?JWT_SECRET is not set - copy .env.example to .env and fill it in (e.g. openssl rand -base64 64)}"
+      Termii__ApiKey: "${TERMII_API_KEY:?TERMII_API_KEY is not set - copy .env.example to .env and fill it in}"
+      Email__SmtpKey: "${EMAIL_SMTP_KEY:?EMAIL_SMTP_KEY is not set - copy .env.example to .env and fill it in}"
+      Verification__Provider: "Aws"
+      Aws__Region: "${AWS_REGION:?AWS_REGION is not set - copy .env.example to .env and fill it in}"
+      Aws__AccessKeyId: "${AWS_ACCESS_KEY_ID:?AWS_ACCESS_KEY_ID is not set - copy .env.example to .env and fill it in}"
+      Aws__SecretAccessKey: "${AWS_SECRET_ACCESS_KEY:?AWS_SECRET_ACCESS_KEY is not set - copy .env.example to .env and fill it in}"
+      Aws__S3BucketName: "${AWS_S3_BUCKET_NAME:?AWS_S3_BUCKET_NAME is not set - copy .env.example to .env and fill it in}"
+      Aws__Rekognition__FaceMatchThreshold: "${AWS_REKOGNITION_FACE_MATCH_THRESHOLD:-90}"
+      Payments__Provider: "Paystack"
+      Payments__Paystack__SecretKey: "${PAYSTACK_SECRET_KEY:?PAYSTACK_SECRET_KEY is not set - copy .env.example to .env and fill it in}"
+      Payments__Flutterwave__SecretKey: "${FLUTTERWAVE_SECRET_KEY:-}"
+      Payments__Flutterwave__SecretHash: "${FLUTTERWAVE_SECRET_HASH:-}"
+      Firebase__ProjectId: "${FIREBASE_PROJECT_ID:-}"
+      Firebase__ServiceAccountJson: "${FIREBASE_SERVICE_ACCOUNT_JSON:-}"
+      Ai__Provider: "Gemini"
+      Ai__Gemini__ApiKey: "${GEMINI_API_KEY:-}"
+      Ai__Anthropic__ApiKey: "${ANTHROPIC_API_KEY:-}"
+      AdIntegrations__Facebook__AppId: "${FACEBOOK_ADS_APP_ID:-}"
+      AdIntegrations__Facebook__AppSecret: "${FACEBOOK_ADS_APP_SECRET:-}"
+      AdIntegrations__TikTok__AppId: "${TIKTOK_ADS_APP_ID:-}"
+      AdIntegrations__TikTok__AppSecret: "${TIKTOK_ADS_APP_SECRET:-}"
+      SuperAdminSeed__Name: "${SUPERADMIN_SEED_NAME:-}"
+      SuperAdminSeed__Phone: "${SUPERADMIN_SEED_PHONE:-}"
+      SuperAdminSeed__Email: "${SUPERADMIN_SEED_EMAIL:-}"
+      SuperAdminSeed__Password: "${SUPERADMIN_SEED_PASSWORD:-}"
+      Cors__AllowedOrigins__0: "http://localhost:5173"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ogasela
+      POSTGRES_USER: ogasela
+      POSTGRES_PASSWORD: ogasela
+    ports:
+      - "5432:5432"
+    volumes:
+      - ogasela-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ogasela -d ogasela"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    volumes:
+      - ogasela-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  ogasela-postgres-data:
+  ogasela-redis-data:

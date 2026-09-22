@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Ogasela.Api/Ogasela.Api.csproj" />
+    <Project Path="src/Ogasela.Application/Ogasela.Application.csproj" />
+    <Project Path="src/Ogasela.Domain/Ogasela.Domain.csproj" />
+    <Project Path="src/Ogasela.Infrastructure/Ogasela.Infrastructure.csproj" />
+    <Project Path="src/Ogasela.Shared/Ogasela.Shared.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Ogasela.IntegrationTests/Ogasela.IntegrationTests.csproj" />
+    <Project Path="tests/Ogasela.UnitTests/Ogasela.UnitTests.csproj" />
+  </Folder>
+</Solution>

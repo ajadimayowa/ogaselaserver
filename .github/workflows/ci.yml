@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_VERSION: "10.0.x"
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+
+jobs:
+  build-and-test:
+    name: Build, test, and scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore Ogasela.slnx
+
+      - name: Build
+        run: dotnet build Ogasela.slnx --configuration Release --no-restore
+
+      # Testcontainers needs a Docker daemon - already present on GitHub-hosted ubuntu-latest
+      # runners, so no extra setup step is needed here.
+      - name: Unit tests
+        run: dotnet test tests/Ogasela.UnitTests/Ogasela.UnitTests.csproj --configuration Release --no-build --logger "trx;LogFileName=unit-tests.trx"
+
+      - name: Integration tests
+        run: dotnet test tests/Ogasela.IntegrationTests/Ogasela.IntegrationTests.csproj --configuration Release --no-build --logger "trx;LogFileName=integration-tests.trx"
+
+      - name: Publish test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: "**/*.trx"
+          retention-days: 14
+
+      # dotnet list package --vulnerable always exits 0 regardless of what it finds, so the
+      # "fail the build" behaviour is implemented by grepping its own output for a hit.
+      - name: Dependency vulnerability scan
+        run: |
+          set -o pipefail
+          dotnet list Ogasela.slnx package --vulnerable --include-transitive 2>&1 | tee vulnerable-packages.txt
+          if grep -q "has the following vulnerable packages" vulnerable-packages.txt; then
+            echo "::error::Vulnerable NuGet package(s) detected - see the log above."
+            exit 1
+          fi
+
+      - name: Build container image
+        run: docker build -f src/Ogasela.Api/Dockerfile -t ogasela-api:ci .
+
+      - name: Container image vulnerability scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ogasela-api:ci
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          ignore-unfixed: true

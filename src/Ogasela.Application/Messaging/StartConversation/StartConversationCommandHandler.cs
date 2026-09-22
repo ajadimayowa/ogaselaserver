@@ -1,0 +1,76 @@
+using MediatR;
+using Microsoft.EntityFrameworkCore;
+using Ogasela.Application.Common.Interfaces;
+using Ogasela.Domain.Messaging;
+using Ogasela.Shared;
+
+namespace Ogasela.Application.Messaging.StartConversation;
+
+public sealed class StartConversationCommandHandler : IRequestHandler<StartConversationCommand, Result<ConversationResponse>>
+{
+    private readonly IApplicationDbContext _dbContext;
+    private readonly ICurrentUserService _currentUser;
+    private readonly IDateTime _dateTime;
+
+    public StartConversationCommandHandler(IApplicationDbContext dbContext, ICurrentUserService currentUser, IDateTime dateTime)
+    {
+        _dbContext = dbContext;
+        _currentUser = currentUser;
+        _dateTime = dateTime;
+    }
+
+    public async Task<Result<ConversationResponse>> Handle(StartConversationCommand request, CancellationToken cancellationToken)
+    {
+        var buyerId = _currentUser.UserId!.Value;
+
+        var listing = await _dbContext.Listings.FirstOrDefaultAsync(l => l.Id == request.ListingId, cancellationToken);
+        if (listing is null)
+        {
+            return Result.Failure<ConversationResponse>(MessagingErrors.ListingNotFound);
+        }
+
+        var sellerUserId = await _dbContext.SellerProfiles
+            .Where(s => s.Id == listing.SellerId)
+            .Select(s => s.UserId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (buyerId == sellerUserId)
+        {
+            return Result.Failure<ConversationResponse>(MessagingErrors.CannotMessageOwnListing);
+        }
+
+        var blocked = await _dbContext.BlockedUsers.AnyAsync(
+            b => (b.BlockerId == sellerUserId && b.BlockedId == buyerId)
+                 || (b.BlockerId == buyerId && b.BlockedId == sellerUserId),
+            cancellationToken);
+
+        if (blocked)
+        {
+            return Result.Failure<ConversationResponse>(MessagingErrors.Blocked);
+        }
+
+        var existing = await _dbContext.Conversations.FirstOrDefaultAsync(
+            c => c.ListingId == request.ListingId && c.BuyerId == buyerId && c.SellerId == sellerUserId,
+            cancellationToken);
+
+        if (existing is not null)
+        {
+            return Result.Success(ToResponse(existing, buyerId));
+        }
+
+        var conversation = Conversation.Start(request.ListingId, buyerId, sellerUserId, _dateTime.UtcNow);
+        _dbContext.Conversations.Add(conversation);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        return Result.Success(ToResponse(conversation, buyerId));
+    }
+
+    private static ConversationResponse ToResponse(Conversation conversation, Guid currentUserId) => new(
+        conversation.Id,
+        conversation.ListingId,
+        conversation.BuyerId,
+        conversation.SellerId,
+        conversation.GetOtherParticipant(currentUserId),
+        conversation.CreatedAt,
+        conversation.LastMessageAt);
+}

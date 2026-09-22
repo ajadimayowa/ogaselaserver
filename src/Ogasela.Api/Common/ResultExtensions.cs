@@ -1,0 +1,132 @@
+using Microsoft.AspNetCore.Mvc;
+using Ogasela.Shared;
+
+namespace Ogasela.Api.Common;
+
+public static class ResultExtensions
+{
+    public static IActionResult ToActionResult(this Result result, ControllerBase controller)
+    {
+        return result.IsSuccess ? controller.Ok() : controller.ToProblemResult(result.Error);
+    }
+
+    public static IActionResult ToActionResult<T>(this Result<T> result, ControllerBase controller)
+    {
+        return result.IsSuccess ? controller.Ok(result.Value) : controller.ToProblemResult(result.Error);
+    }
+
+    private static IActionResult ToProblemResult(this ControllerBase controller, Error error)
+    {
+        var statusCode = error.Code switch
+        {
+            "User.InvalidCredentials" => StatusCodes.Status401Unauthorized,
+            "User.NotFound" => StatusCodes.Status404NotFound,
+            "User.AlreadyExists" => StatusCodes.Status409Conflict,
+            "User.MfaRequired" => StatusCodes.Status403Forbidden,
+            "User.MfaPhoneRequired" => StatusCodes.Status409Conflict,
+            "User.CurrentPasswordIncorrect" => StatusCodes.Status400BadRequest,
+            "Otp.InvalidCode" => StatusCodes.Status400BadRequest,
+            "Otp.Expired" => StatusCodes.Status400BadRequest,
+            "Otp.RateLimited" => StatusCodes.Status429TooManyRequests,
+            "RefreshToken.Invalid" => StatusCodes.Status401Unauthorized,
+            "RefreshToken.Expired" => StatusCodes.Status401Unauthorized,
+            "RefreshToken.Reused" => StatusCodes.Status401Unauthorized,
+            "Verification.SellerProfileNotFound" => StatusCodes.Status404NotFound,
+            "Verification.NotFound" => StatusCodes.Status404NotFound,
+            "Verification.AlreadyVerified" => StatusCodes.Status409Conflict,
+            "Verification.PendingManualReview" => StatusCodes.Status409Conflict,
+            "Verification.NotPendingManualReview" => StatusCodes.Status409Conflict,
+            "Verification.ConsentRequired" => StatusCodes.Status400BadRequest,
+            "Verification.RawImagesUnavailable" => StatusCodes.Status409Conflict,
+            "Verification.InvalidManualDecision" => StatusCodes.Status400BadRequest,
+            "Category.NotFound" => StatusCodes.Status404NotFound,
+            "Category.ParentNotFound" => StatusCodes.Status400BadRequest,
+            "Category.CannotBeOwnParent" => StatusCodes.Status400BadRequest,
+            "PromotionPlan.NotFound" => StatusCodes.Status404NotFound,
+            "Listing.SellerProfileNotFound" => StatusCodes.Status404NotFound,
+            "Listing.NotFound" => StatusCodes.Status404NotFound,
+            "Listing.NotOwner" => StatusCodes.Status403Forbidden,
+            "Listing.CategoryNotFound" => StatusCodes.Status400BadRequest,
+            "Listing.PromotionPlanNotFound" => StatusCodes.Status400BadRequest,
+            "Listing.MediaLimitExceeded" => StatusCodes.Status400BadRequest,
+            "Listing.InvalidStatusForUpdate" => StatusCodes.Status409Conflict,
+            "Listing.InvalidStatusForPublish" => StatusCodes.Status409Conflict,
+            "Listing.InvalidStatusForRepost" => StatusCodes.Status409Conflict,
+            "Listing.InvalidStatusForPause" => StatusCodes.Status409Conflict,
+            "Listing.InvalidStatusForMarkSold" => StatusCodes.Status409Conflict,
+            "Listing.NotVerified" => StatusCodes.Status403Forbidden,
+            "Listing.NoPlanSelected" => StatusCodes.Status400BadRequest,
+            "Listing.CategoryNotFreeEligible" => StatusCodes.Status400BadRequest,
+            "Listing.FreePlanCapReached" => StatusCodes.Status409Conflict,
+            "Listing.PaymentFailed" => StatusCodes.Status402PaymentRequired,
+            "Payment.PlanNotFound" => StatusCodes.Status404NotFound,
+            "Payment.Required" => StatusCodes.Status402PaymentRequired,
+            "Payment.InsufficientBalance" => StatusCodes.Status402PaymentRequired,
+            "Payment.SellerProfileNotFound" => StatusCodes.Status404NotFound,
+            "Payment.InvalidAmount" => StatusCodes.Status400BadRequest,
+            "Payment.GatewayError" => StatusCodes.Status502BadGateway,
+            "Payment.UnknownProvider" => StatusCodes.Status400BadRequest,
+            "Payment.InvalidWebhookSignature" => StatusCodes.Status400BadRequest,
+            "Payment.WebhookReferenceMissing" => StatusCodes.Status400BadRequest,
+            "Payment.TransactionNotFound" => StatusCodes.Status404NotFound,
+            "Payment.TransactionNotRefundable" => StatusCodes.Status409Conflict,
+            "Payment.WalletNotFound" => StatusCodes.Status404NotFound,
+            "Payment.RefundExceedsWalletBalance" => StatusCodes.Status409Conflict,
+            "Messaging.ListingNotFound" => StatusCodes.Status404NotFound,
+            "Messaging.CannotMessageOwnListing" => StatusCodes.Status400BadRequest,
+            "Messaging.ConversationNotFound" => StatusCodes.Status404NotFound,
+            "Messaging.NotParticipant" => StatusCodes.Status403Forbidden,
+            "Messaging.Blocked" => StatusCodes.Status403Forbidden,
+            "Messaging.CannotBlockSelf" => StatusCodes.Status400BadRequest,
+            "Messaging.CannotReportSelf" => StatusCodes.Status400BadRequest,
+            "Review.ListingNotFound" => StatusCodes.Status404NotFound,
+            "Review.CannotReviewSelf" => StatusCodes.Status400BadRequest,
+            "Review.AlreadyReviewed" => StatusCodes.Status409Conflict,
+            "Review.SellerProfileNotFound" => StatusCodes.Status404NotFound,
+            "Ai.PlanNotFound" => StatusCodes.Status404NotFound,
+            "Ai.NotIncludedInPlan" => StatusCodes.Status403Forbidden,
+            "Ai.GenerationFailed" => StatusCodes.Status502BadGateway,
+            "Ai.NotEnoughComparableData" => StatusCodes.Status404NotFound,
+            "Ai.EnhancementFailed" => StatusCodes.Status502BadGateway,
+            "AdIntegrations.ConnectionNotFound" => StatusCodes.Status404NotFound,
+            "AdIntegrations.ConnectionRevoked" => StatusCodes.Status409Conflict,
+            "AdIntegrations.CampaignNotFound" => StatusCodes.Status404NotFound,
+            "AdIntegrations.PromotionNotAllowed" => StatusCodes.Status403Forbidden,
+            "AdIntegrations.InvalidOAuthState" => StatusCodes.Status400BadRequest,
+            "AdIntegrations.OAuthCallbackFailed" => StatusCodes.Status502BadGateway,
+            "AdIntegrations.PlatformRequestFailed" => StatusCodes.Status502BadGateway,
+            "Moderation.ReportNotFound" => StatusCodes.Status404NotFound,
+            "Moderation.ReportAlreadyDecided" => StatusCodes.Status409Conflict,
+            "Admin.UserNotFound" => StatusCodes.Status404NotFound,
+            "Rbac.DepartmentNotFound" => StatusCodes.Status404NotFound,
+            "Rbac.DepartmentNameTaken" => StatusCodes.Status409Conflict,
+            "Rbac.UnitNotFound" => StatusCodes.Status404NotFound,
+            "Rbac.UnitNameTaken" => StatusCodes.Status409Conflict,
+            "Rbac.RoleNotFound" => StatusCodes.Status404NotFound,
+            "Rbac.RoleNameTaken" => StatusCodes.Status409Conflict,
+            "Rbac.InvalidPermissionKeys" => StatusCodes.Status400BadRequest,
+            "Rbac.InsufficientHierarchyPermission" => StatusCodes.Status403Forbidden,
+            "Rbac.ActorNotEligible" => StatusCodes.Status403Forbidden,
+            "Geo.StateNotFound" => StatusCodes.Status404NotFound,
+            "Geo.StateNameOrCodeTaken" => StatusCodes.Status409Conflict,
+            "Geo.CityNotFound" => StatusCodes.Status404NotFound,
+            "Geo.CityNameTaken" => StatusCodes.Status409Conflict,
+            "Staff.NotFound" => StatusCodes.Status404NotFound,
+            "Staff.UserNotFound" => StatusCodes.Status404NotFound,
+            "Staff.DepartmentNotFound" => StatusCodes.Status404NotFound,
+            "Staff.UnitNotFound" => StatusCodes.Status404NotFound,
+            "Staff.RoleNotFound" => StatusCodes.Status404NotFound,
+            "Staff.AlreadyDecided" => StatusCodes.Status409Conflict,
+            "Staff.EmailOrPhoneAlreadyExists" => StatusCodes.Status409Conflict,
+            "Staff.InsufficientHierarchyPermission" => StatusCodes.Status403Forbidden,
+            "Staff.ActorNotEligible" => StatusCodes.Status403Forbidden,
+            "Validation.Failed" => StatusCodes.Status400BadRequest,
+            _ => StatusCodes.Status400BadRequest
+        };
+
+        return controller.Problem(
+            title: error.Code,
+            detail: error.Message,
+            statusCode: statusCode);
+    }
+}

@@ -1,0 +1,127 @@
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Ogasela.Api.Common;
+using Ogasela.Api.Contracts.Listings;
+using Ogasela.Application.Listings.CreateDraftListing;
+using Ogasela.Application.Listings.GetListing;
+using Ogasela.Application.Listings.GetSellerListings;
+using Ogasela.Application.Listings.MarkSoldListing;
+using Ogasela.Application.Listings.PauseListing;
+using Ogasela.Application.Listings.PublishListing;
+using Ogasela.Application.Listings.RepostListing;
+using Ogasela.Application.Listings.UpdateListing;
+using Ogasela.Application.Listings.UploadListingImage;
+
+namespace Ogasela.Api.Controllers.Listings;
+
+/// <summary>Listing CRUD and lifecycle transitions (Draft -&gt; Active -&gt; Paused/Sold/Expired). Reading a listing is public; every write requires the caller to own it.</summary>
+[ApiController]
+public sealed class ListingsController : ControllerBase
+{
+    private readonly ISender _sender;
+
+    public ListingsController(ISender sender)
+    {
+        _sender = sender;
+    }
+
+    /// <summary>Creates a new listing as a Draft. Nothing here is validated against the chosen PromotionPlan's limits (photo count, free-tier eligibility, etc.) until Publish is called.</summary>
+    [HttpPost("api/v1/listings")]
+    [Authorize]
+    public async Task<IActionResult> CreateDraft(CreateListingRequest request, CancellationToken cancellationToken)
+    {
+        var command = new CreateDraftListingCommand(
+            request.Title, request.Description, request.CategoryId, request.Price, request.Condition,
+            request.MediaUrls ?? [], request.PromotionPlanId, request.Location, request.Latitude, request.Longitude);
+
+        var result = await _sender.Send(command, cancellationToken);
+        return result.ToActionResult(this);
+    }
+
+    /// <summary>Uploads a single photo (multipart/form-data, up to 10MB) and returns its permanent public URL - call this once per photo, then pass the returned URLs in CreateListingRequest/UpdateListingRequest.MediaUrls.</summary>
+    [HttpPost("api/v1/listings/images")]
+    [Authorize]
+    [RequestSizeLimit(10_000_000)]
+    public async Task<IActionResult> UploadImage([FromForm] UploadListingImageRequest request, CancellationToken cancellationToken)
+    {
+        await using var stream = request.Image.OpenReadStream();
+        var command = new UploadListingImageCommand(stream, request.Image.FileName, request.Image.ContentType);
+        var result = await _sender.Send(command, cancellationToken);
+        return result.ToActionResult(this);
+    }
+
+    /// <summary>Replaces a listing's editable fields. Only allowed while the listing is a Draft or Active.</summary>
+    [HttpPut("api/v1/listings/{id:guid}")]
+    [Authorize]
+    public async Task<IActionResult> Update(Guid id, UpdateListingRequest request, CancellationToken cancellationToken)
+    {
+        var command = new UpdateListingCommand(
+            id, request.Title, request.Description, request.CategoryId, request.Price, request.Condition,
+            request.MediaUrls ?? [], request.PromotionPlanId, request.Location, request.Latitude, request.Longitude);
+
+        var result = await _sender.Send(command, cancellationToken);
+        return result.ToActionResult(this);
+    }
+
+    /// <summary>
+    /// Publishes a Draft listing: requires the seller to be biometrically Verified and a
+    /// PromotionPlan to be selected; debits the wallet for a paid plan (fails cleanly, listing
+    /// stays Draft, if the balance is insufficient). Also runs Phase 9's fraud-risk check, which
+    /// can open a moderation Report but never blocks publishing.
+    /// </summary>
+    [HttpPost("api/v1/listings/{id:guid}/publish")]
+    [Authorize]
+    public async Task<IActionResult> Publish(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(new PublishListingCommand(id), cancellationToken);
+        return result.ToActionResult(this);
+    }
+
+    /// <summary>Public - no authentication required. Returns any listing regardless of status.</summary>
+    [HttpGet("api/v1/listings/{id:guid}")]
+    public async Task<IActionResult> Get(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(new GetListingQuery(id), cancellationToken);
+        return result.ToActionResult(this);
+    }
+
+    /// <summary>Public - a seller's own storefront/listing history. id is the SellerProfile id, not the User id.</summary>
+    [HttpGet("api/v1/sellers/{id:guid}/listings")]
+    public async Task<IActionResult> GetSellerListings(
+        Guid id, [FromQuery] int page, [FromQuery] int pageSize, CancellationToken cancellationToken)
+    {
+        var query = new GetSellerListingsQuery(
+            id, page <= 0 ? 1 : page, pageSize <= 0 ? 20 : pageSize);
+
+        var result = await _sender.Send(query, cancellationToken);
+        return result.ToActionResult(this);
+    }
+
+    /// <summary>Takes an Active or ExpiringSoon listing off public view. Use repost to bring it back.</summary>
+    [HttpPost("api/v1/listings/{id:guid}/pause")]
+    [Authorize]
+    public async Task<IActionResult> Pause(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(new PauseListingCommand(id), cancellationToken);
+        return result.ToActionResult(this);
+    }
+
+    /// <summary>Marks an Active, ExpiringSoon, or Paused listing as Sold. This is terminal - a sold listing can't be reposted.</summary>
+    [HttpPost("api/v1/listings/{id:guid}/mark-sold")]
+    [Authorize]
+    public async Task<IActionResult> MarkSold(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(new MarkSoldCommand(id), cancellationToken);
+        return result.ToActionResult(this);
+    }
+
+    /// <summary>Republishes an Expired, Sold, or Paused listing, re-running the same plan/payment/verification checks as an initial publish.</summary>
+    [HttpPost("api/v1/listings/{id:guid}/repost")]
+    [Authorize]
+    public async Task<IActionResult> Repost(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(new RepostListingCommand(id), cancellationToken);
+        return result.ToActionResult(this);
+    }
+}
