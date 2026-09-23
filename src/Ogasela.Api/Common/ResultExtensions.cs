@@ -121,6 +121,7 @@ public static class ResultExtensions
             "Staff.InsufficientHierarchyPermission" => StatusCodes.Status403Forbidden,
             "Staff.ActorNotEligible" => StatusCodes.Status403Forbidden,
             "Validation.Failed" => StatusCodes.Status400BadRequest,
+            "Turnstile.VerificationFailed" => StatusCodes.Status400BadRequest,
             _ => StatusCodes.Status400BadRequest
         };
 

@@ -9,7 +9,8 @@ public sealed record RegisterRequest(
     UserRole AccountType,
     string? BusinessName,
     string? RcNumber,
-    string? Nin);
+    string? Nin,
+    string? Name = null);
 
 public sealed record RequestOtpRequest(string Phone);
 
@@ -18,6 +19,8 @@ public sealed record VerifyOtpRequest(string Phone, string Code);
 public sealed record ConfirmPasswordResetRequest(string Phone, string Code, string NewPassword);
 
 public sealed record LoginRequest(string? Phone, string? Email, string Password);
+
+public sealed record VerifyLoginOtpRequest(string? Phone, string? Email, string Code);
 
 public sealed record AdminLoginRequest(string Email, string Password);
 

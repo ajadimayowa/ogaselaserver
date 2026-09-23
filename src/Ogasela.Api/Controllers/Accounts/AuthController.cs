@@ -14,6 +14,7 @@ using Ogasela.Application.Accounts.Refresh;
 using Ogasela.Application.Accounts.RegisterUser;
 using Ogasela.Application.Accounts.RequestOtp;
 using Ogasela.Application.Accounts.VerifyAdminLoginOtp;
+using Ogasela.Application.Accounts.VerifyLoginOtp;
 using Ogasela.Application.Accounts.VerifyOtp;
 
 namespace Ogasela.Api.Controllers.Accounts;
@@ -42,7 +43,8 @@ public sealed class AuthController : ControllerBase
             request.AccountType,
             request.BusinessName,
             request.RcNumber,
-            request.Nin);
+            request.Nin,
+            request.Name);
 
         var result = await _sender.Send(command, cancellationToken);
         return result.ToActionResult(this);
@@ -78,7 +80,13 @@ public sealed class AuthController : ControllerBase
         return result.ToActionResult(this);
     }
 
-    /// <summary>Exchanges phone-or-email + password for a fresh access/refresh token pair. Exactly one of Phone/Email must match an existing account.</summary>
+    /// <summary>
+    /// Step 1 of every consumer login: phone-or-email + password. Exactly one of Phone/Email must
+    /// match an existing account. On success an OTP has been sent to the account's phone (and
+    /// email, if it has one); complete sign-in with login/verify. Internal roles
+    /// (Moderator/FinanceAdmin/SuperAdmin/Staff) cannot use this endpoint at all - it always fails
+    /// with User.MfaRequired for them - see admin/login instead.
+    /// </summary>
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginRequest request, CancellationToken cancellationToken)
     {
@@ -86,11 +94,19 @@ public sealed class AuthController : ControllerBase
         return result.ToActionResult(this);
     }
 
+    /// <summary>Step 2: the OTP login sent. No password here - having a code to submit at all already proves step 1 passed. Phone/Email should match whichever identifier was used for login.</summary>
+    [HttpPost("login/verify")]
+    public async Task<IActionResult> VerifyLoginOtp(VerifyLoginOtpRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(new VerifyLoginOtpCommand(request.Phone, request.Email, request.Code), cancellationToken);
+        return result.ToActionResult(this);
+    }
+
     /// <summary>
     /// Step 1 of the admin portal's two-factor login: email + password. Internal roles
-    /// (Moderator/FinanceAdmin/SuperAdmin) cannot use the plain login endpoint above at all - it
-    /// always fails with User.MfaRequired for them - so this is the only way in. On success, an
-    /// OTP has been sent to the account's email and phone; complete sign-in with admin/login/verify.
+    /// (Moderator/FinanceAdmin/SuperAdmin/Staff) cannot use the plain login endpoint above at all
+    /// - it always fails with User.MfaRequired for them - so this is the only way in. On success,
+    /// an OTP has been sent to the account's email and phone; complete sign-in with admin/login/verify.
     /// </summary>
     [HttpPost("admin/login")]
     public async Task<IActionResult> AdminLogin(AdminLoginRequest request, CancellationToken cancellationToken)

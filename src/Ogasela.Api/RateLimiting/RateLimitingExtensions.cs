@@ -24,6 +24,7 @@ public static class RateLimitingExtensions
 {
     public const string AuthPolicy = "auth";
     public const string MessagingPolicy = "messaging";
+    public const string MarketingPolicy = "marketing";
 
     public static IServiceCollection AddApiRateLimiting(this IServiceCollection services, IConfiguration configuration)
     {
@@ -60,6 +61,21 @@ public static class RateLimitingExtensions
                         QueueLimit = 0
                     });
             });
+
+            // Anonymous marketing-site forms (contact, tester signup, deletion requests) - IP
+            // partitioned like Auth, since there's no authenticated user yet.
+            options.AddPolicy(MarketingPolicy, httpContext =>
+            {
+                var settings = GetSettings(httpContext);
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: GetClientIpAddress(httpContext),
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = settings.MarketingPermitsPerMinute,
+                        QueueLimit = 0
+                    });
+            });
         });
 
         return services;
@@ -79,4 +95,6 @@ public sealed class RateLimitSettings
     public int AuthPermitsPerMinute { get; init; } = 10;
 
     public int MessagingPermitsPerMinute { get; init; } = 20;
+
+    public int MarketingPermitsPerMinute { get; init; } = 10;
 }
