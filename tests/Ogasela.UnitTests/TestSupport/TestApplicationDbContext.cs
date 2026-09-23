@@ -4,6 +4,7 @@ using Ogasela.Domain.Accounts;
 using Ogasela.Domain.AdIntegrations;
 using Ogasela.Domain.Geo;
 using Ogasela.Domain.Listings;
+using Ogasela.Domain.Marketing;
 using Ogasela.Domain.Messaging;
 using Ogasela.Domain.Moderation;
 using Ogasela.Domain.Notifications;
@@ -88,6 +89,12 @@ public sealed class TestApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<NigeriaState> NigeriaStates => Set<NigeriaState>();
 
     public DbSet<NigeriaCity> NigeriaCities => Set<NigeriaCity>();
+
+    public DbSet<ContactFormSubmission> ContactFormSubmissions => Set<ContactFormSubmission>();
+
+    public DbSet<TesterSignup> TesterSignups => Set<TesterSignup>();
+
+    public DbSet<AccountDeletionRequest> AccountDeletionRequests => Set<AccountDeletionRequest>();
 
     public static TestApplicationDbContext Create()
     {

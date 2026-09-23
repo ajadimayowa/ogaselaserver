@@ -19,6 +19,7 @@ using Ogasela.Application.Notifications.Interfaces;
 using Ogasela.Application.Payments;
 using Ogasela.Application.Promotions.Interfaces;
 using Ogasela.Application.Listings.Interfaces;
+using Ogasela.Application.Marketing.Interfaces;
 using Ogasela.Application.Search;
 using Ogasela.Application.Staff.Interfaces;
 using Ogasela.Application.Verification.Interfaces;
@@ -27,6 +28,7 @@ using Ogasela.Infrastructure.AdIntegrations;
 using Ogasela.Infrastructure.Ai;
 using Ogasela.Infrastructure.Common;
 using Ogasela.Infrastructure.Listings;
+using Ogasela.Infrastructure.Marketing;
 using Ogasela.Infrastructure.Messaging;
 using Ogasela.Infrastructure.Notifications;
 using Ogasela.Infrastructure.Payments;
@@ -81,6 +83,14 @@ public static class DependencyInjection
 
         services.Configure<EmailSettings>(configuration.GetSection(EmailSettings.SectionName));
         services.AddScoped<IEmailSender, SmtpEmailSender>();
+
+        services.Configure<TurnstileSettings>(configuration.GetSection(TurnstileSettings.SectionName));
+        services.AddHttpClient<ITurnstileVerifier, CloudflareTurnstileVerifier>((sp, client) =>
+        {
+            var baseUrl = configuration[$"{TurnstileSettings.SectionName}:BaseUrl"]
+                ?? throw new InvalidOperationException("Turnstile:BaseUrl was not found in configuration.");
+            client.BaseAddress = new Uri(baseUrl);
+        });
 
         AddVerification(services, configuration, connectionString);
 
@@ -220,6 +230,7 @@ public static class DependencyInjection
             services.AddSingleton<IListingImageStorage, InMemoryListingImageStorage>();
         }
 
+        services.AddScoped<IListingImageProcessor, ImageSharpListingImageProcessor>();
         services.AddScoped<IBiometricDataErasureService, BiometricDataErasureService>();
         services.AddScoped<RawImageExpiryJob>();
 

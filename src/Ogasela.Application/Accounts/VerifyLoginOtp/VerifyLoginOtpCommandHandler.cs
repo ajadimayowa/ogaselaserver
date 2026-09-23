@@ -2,31 +2,31 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Ogasela.Application.Accounts.Interfaces;
 using Ogasela.Application.Common.Interfaces;
-using Ogasela.Domain.Accounts;
 using Ogasela.Shared;
 
-namespace Ogasela.Application.Accounts.VerifyAdminLoginOtp;
+namespace Ogasela.Application.Accounts.VerifyLoginOtp;
 
-public sealed class VerifyAdminLoginOtpCommandHandler : IRequestHandler<VerifyAdminLoginOtpCommand, Result<AuthTokenResponse>>
+public sealed class VerifyLoginOtpCommandHandler : IRequestHandler<VerifyLoginOtpCommand, Result<AuthTokenResponse>>
 {
-    private static readonly HashSet<UserRole> AllowedRoles = [UserRole.Moderator, UserRole.FinanceAdmin, UserRole.SuperAdmin, UserRole.Staff];
-
     private readonly IApplicationDbContext _dbContext;
     private readonly IOtpService _otpService;
     private readonly AuthTokenIssuer _tokenIssuer;
 
-    public VerifyAdminLoginOtpCommandHandler(IApplicationDbContext dbContext, IOtpService otpService, AuthTokenIssuer tokenIssuer)
+    public VerifyLoginOtpCommandHandler(IApplicationDbContext dbContext, IOtpService otpService, AuthTokenIssuer tokenIssuer)
     {
         _dbContext = dbContext;
         _otpService = otpService;
         _tokenIssuer = tokenIssuer;
     }
 
-    public async Task<Result<AuthTokenResponse>> Handle(VerifyAdminLoginOtpCommand request, CancellationToken cancellationToken)
+    public async Task<Result<AuthTokenResponse>> Handle(VerifyLoginOtpCommand request, CancellationToken cancellationToken)
     {
-        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email, cancellationToken);
+        var user = await _dbContext.Users.FirstOrDefaultAsync(
+            u => (request.Phone != null && u.Phone == request.Phone) ||
+                 (request.Email != null && u.Email == request.Email),
+            cancellationToken);
 
-        if (user is null || !AllowedRoles.Contains(user.Role) || string.IsNullOrWhiteSpace(user.Phone))
+        if (user is null || string.IsNullOrWhiteSpace(user.Phone))
         {
             return Result.Failure<AuthTokenResponse>(AccountErrors.InvalidCredentials);
         }

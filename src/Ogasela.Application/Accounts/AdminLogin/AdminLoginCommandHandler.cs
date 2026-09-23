@@ -20,7 +20,7 @@ namespace Ogasela.Application.Accounts.AdminLogin;
 /// </summary>
 public sealed class AdminLoginCommandHandler : IRequestHandler<AdminLoginCommand, Result<AdminLoginResponse>>
 {
-    private static readonly HashSet<UserRole> AllowedRoles = [UserRole.Moderator, UserRole.FinanceAdmin, UserRole.SuperAdmin];
+    private static readonly HashSet<UserRole> AllowedRoles = [UserRole.Moderator, UserRole.FinanceAdmin, UserRole.SuperAdmin, UserRole.Staff];
 
     private readonly IApplicationDbContext _dbContext;
     private readonly IPasswordHasher _passwordHasher;

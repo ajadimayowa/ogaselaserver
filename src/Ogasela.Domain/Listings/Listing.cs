@@ -2,6 +2,9 @@ namespace Ogasela.Domain.Listings;
 
 public class Listing
 {
+    /// <summary>Hard ceiling on MediaUrls, enforced regardless of the selected PromotionPlan's PhotoLimit.</summary>
+    public const int MaxPhotoCount = 5;
+
     private Listing()
     {
     }

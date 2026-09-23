@@ -153,9 +153,19 @@ public class VerificationFlowTests : IClassFixture<VerificationApiFactory>
 
         var loginResponse = await client.PostAsJsonAsync(
             "/api/v1/auth/login", new LoginRequest(phone, null, password));
-        var tokens = await loginResponse.Content.ReadFromJsonAsync<AuthTokenResponse>();
+        loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens!.AccessToken);
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var otpService = scope.ServiceProvider.GetRequiredService<IOtpService>();
+            var loginCode = await otpService.PeekAsync(phone, CancellationToken.None);
+            var verifyLoginResponse = await client.PostAsJsonAsync(
+                "/api/v1/auth/login/verify", new VerifyLoginOtpRequest(phone, null, loginCode!));
+            var tokens = await verifyLoginResponse.Content.ReadFromJsonAsync<AuthTokenResponse>();
+
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens!.AccessToken);
+        }
+
         return client;
     }
 

@@ -3,6 +3,7 @@ using Ogasela.Domain.Accounts;
 using Ogasela.Domain.AdIntegrations;
 using Ogasela.Domain.Geo;
 using Ogasela.Domain.Listings;
+using Ogasela.Domain.Marketing;
 using Ogasela.Domain.Messaging;
 using Ogasela.Domain.Moderation;
 using Ogasela.Domain.Notifications;
@@ -77,6 +78,12 @@ public interface IApplicationDbContext
     DbSet<NigeriaState> NigeriaStates { get; }
 
     DbSet<NigeriaCity> NigeriaCities { get; }
+
+    DbSet<ContactFormSubmission> ContactFormSubmissions { get; }
+
+    DbSet<TesterSignup> TesterSignups { get; }
+
+    DbSet<AccountDeletionRequest> AccountDeletionRequests { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 

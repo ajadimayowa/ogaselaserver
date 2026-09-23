@@ -197,7 +197,15 @@ public class AdminModerationTests : IClassFixture<AdminApiFactory>
         var loginResponse = await client.PostAsJsonAsync(
             "/api/v1/auth/login", new Ogasela.Api.Contracts.Accounts.LoginRequest(phone, null, password));
         loginResponse.EnsureSuccessStatusCode();
-        var tokens = await loginResponse.Content.ReadFromJsonAsync<Ogasela.Application.Accounts.AuthTokenResponse>();
+
+        using var scope = _factory.Services.CreateScope();
+        var otpService = scope.ServiceProvider.GetRequiredService<Ogasela.Application.Accounts.Interfaces.IOtpService>();
+        var code = await otpService.PeekAsync(phone, CancellationToken.None);
+
+        var verifyLoginResponse = await client.PostAsJsonAsync(
+            "/api/v1/auth/login/verify", new Ogasela.Api.Contracts.Accounts.VerifyLoginOtpRequest(phone, null, code!));
+        verifyLoginResponse.EnsureSuccessStatusCode();
+        var tokens = await verifyLoginResponse.Content.ReadFromJsonAsync<Ogasela.Application.Accounts.AuthTokenResponse>();
 
         client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokens!.AccessToken);

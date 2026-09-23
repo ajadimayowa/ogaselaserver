@@ -1,4 +1,5 @@
 using FluentValidation;
+using Ogasela.Domain.Listings;
 
 namespace Ogasela.Application.Listings.UpdateListing;
 
@@ -17,6 +18,9 @@ public sealed class UpdateListingCommandValidator : AbstractValidator<UpdateList
         });
 
         RuleFor(x => x.MediaUrls).NotNull();
+        RuleFor(x => x.MediaUrls).Must(m => m.Count <= Listing.MaxPhotoCount)
+            .WithMessage($"A listing can have at most {Listing.MaxPhotoCount} photos.")
+            .When(x => x.MediaUrls is not null);
         RuleForEach(x => x.MediaUrls).NotEmpty();
     }
 }

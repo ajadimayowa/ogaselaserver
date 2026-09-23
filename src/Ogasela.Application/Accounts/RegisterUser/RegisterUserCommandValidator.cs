@@ -38,5 +38,10 @@ public sealed class RegisterUserCommandValidator : AbstractValidator<RegisterUse
                 .NotEmpty()
                 .WithMessage("Business name is required when registering as a seller.");
         });
+
+        When(x => !string.IsNullOrWhiteSpace(x.Name), () =>
+        {
+            RuleFor(x => x.Name!).MaximumLength(200);
+        });
     }
 }

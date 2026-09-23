@@ -71,10 +71,18 @@ public class AuthFlowTests : IClassFixture<AccountsApiFactory>
         var verifyResponse = await client.PostAsJsonAsync("/api/v1/auth/otp/verify", new VerifyOtpRequest(phone, code!));
         verifyResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        // 4. Login
+        // 4. Login (step 1: password -> OTP sent)
         var loginResponse = await client.PostAsJsonAsync("/api/v1/auth/login", new LoginRequest(phone, null, password));
         loginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        var tokens = await loginResponse.Content.ReadFromJsonAsync<AuthTokenResponse>();
+
+        var loginCode = await otpService.PeekAsync(phone, CancellationToken.None);
+        loginCode.Should().NotBeNullOrEmpty();
+
+        // 4b. Login (step 2: OTP -> tokens)
+        var verifyLoginResponse = await client.PostAsJsonAsync(
+            "/api/v1/auth/login/verify", new VerifyLoginOtpRequest(phone, null, loginCode!));
+        verifyLoginResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var tokens = await verifyLoginResponse.Content.ReadFromJsonAsync<AuthTokenResponse>();
         tokens.Should().NotBeNull();
         tokens!.AccessToken.Should().NotBeNullOrWhiteSpace();
         tokens.RefreshToken.Should().NotBeNullOrWhiteSpace();

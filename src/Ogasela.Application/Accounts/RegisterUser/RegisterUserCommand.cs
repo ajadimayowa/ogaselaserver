@@ -11,4 +11,5 @@ public sealed record RegisterUserCommand(
     UserRole AccountType,
     string? BusinessName,
     string? RcNumber,
-    string? Nin) : IRequest<Result<RegisterUserResponse>>;
+    string? Nin,
+    string? Name = null) : IRequest<Result<RegisterUserResponse>>;

@@ -42,7 +42,7 @@ public sealed class RegisterUserCommandHandler : IRequestHandler<RegisterUserCom
         }
 
         var passwordHash = _passwordHasher.Hash(request.Password);
-        var user = User.Create(request.Phone, request.Email, passwordHash, request.AccountType);
+        var user = User.Create(request.Phone, request.Email, passwordHash, request.AccountType, request.Name);
         _dbContext.Users.Add(user);
 
         if (request.AccountType == UserRole.Seller)
@@ -55,13 +55,13 @@ public sealed class RegisterUserCommandHandler : IRequestHandler<RegisterUserCom
 
         if (!string.IsNullOrWhiteSpace(request.Email))
         {
-            await SendWelcomeEmailAsync(request.Email, request.AccountType, cancellationToken);
+            await SendWelcomeEmailAsync(request.Email, request.Name, request.AccountType, cancellationToken);
         }
 
         return Result.Success(new RegisterUserResponse(user.Id, user.Role));
     }
 
-    private async Task SendWelcomeEmailAsync(string email, UserRole accountType, CancellationToken cancellationToken)
+    private async Task SendWelcomeEmailAsync(string email, string? name, UserRole accountType, CancellationToken cancellationToken)
     {
         try
         {
@@ -77,7 +77,7 @@ public sealed class RegisterUserCommandHandler : IRequestHandler<RegisterUserCom
                 eyebrow: "Welcome");
 
             await _emailSender.SendAsync(
-                new EmailMessage(email, ToName: null, Subject: "Welcome to Ogasela", HtmlBody: html),
+                new EmailMessage(email, ToName: name, Subject: "Welcome to Ogasela", HtmlBody: html),
                 cancellationToken);
         }
         catch (Exception ex)
