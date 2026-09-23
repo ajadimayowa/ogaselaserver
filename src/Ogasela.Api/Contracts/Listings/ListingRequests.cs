@@ -3,6 +3,7 @@ using Ogasela.Domain.Listings;
 
 namespace Ogasela.Api.Contracts.Listings;
 
+/// <summary>MediaUrls: at most Listing.MaxPhotoCount (5) URLs, each returned by POST api/v1/listings/images.</summary>
 public sealed record CreateListingRequest(
     string Title,
     string Description,
@@ -15,6 +16,7 @@ public sealed record CreateListingRequest(
     decimal? Latitude = null,
     decimal? Longitude = null);
 
+/// <summary>MediaUrls: at most Listing.MaxPhotoCount (5) URLs, each returned by POST api/v1/listings/images.</summary>
 public sealed record UpdateListingRequest(
     string Title,
     string Description,

@@ -39,7 +39,12 @@ public sealed class ListingsController : ControllerBase
         return result.ToActionResult(this);
     }
 
-    /// <summary>Uploads a single photo (multipart/form-data, up to 10MB) and returns its permanent public URL - call this once per photo, then pass the returned URLs in CreateListingRequest/UpdateListingRequest.MediaUrls.</summary>
+    /// <summary>
+    /// Uploads a single photo (multipart/form-data, up to 10MB), compresses it and stamps an
+    /// "Ogasela • {seller's business name}" watermark on it, then returns its permanent public
+    /// URL - call this once per photo, then pass the returned URLs (at most 5) in
+    /// CreateListingRequest/UpdateListingRequest.MediaUrls.
+    /// </summary>
     [HttpPost("api/v1/listings/images")]
     [Authorize]
     [RequestSizeLimit(10_000_000)]
