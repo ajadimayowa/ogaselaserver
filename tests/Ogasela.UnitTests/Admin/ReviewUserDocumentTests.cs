@@ -24,7 +24,7 @@ public class ReviewUserDocumentTests
         db.UserDocuments.Add(document);
         await db.SaveChangesAsync(CancellationToken.None);
         var handler = new AdminUserCommandHandlers(
-            db, new FakeCurrentUserService { UserId = Guid.NewGuid() }, new NoOpAuditLogger(), clock);
+            db, new FakeCurrentUserService { UserId = Guid.NewGuid() }, new NoOpAuditLogger(), clock, new FakePublisher());
         return (handler, db, document);
     }
 

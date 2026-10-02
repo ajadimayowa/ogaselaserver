@@ -57,6 +57,13 @@ public sealed class AdminUsersController : ControllerBase
     public async Task<IActionResult> RevokeSessions(Guid id, CancellationToken cancellationToken) =>
         (await _sender.Send(new RevokeUserSessionsCommand(id), cancellationToken)).ToActionResult(this);
 
+    /// <summary>Verify a seller by hand (or revoke it, with a reason they see). Verified sellers can publish ads.</summary>
+    [HttpPost("{id:guid}/verification")]
+    [Authorize(Policy = "perm:users.verify")]
+    public async Task<IActionResult> SetVerification(Guid id, SetSellerVerificationRequest request, CancellationToken cancellationToken) =>
+        (await _sender.Send(new SetSellerVerificationCommand(id, request.Verified, request.Reason), cancellationToken))
+            .ToActionResult(this);
+
     [HttpPost("{id:guid}/documents/{documentId:guid}/review")]
     [Authorize(Policy = "perm:users.documents.review")]
     public async Task<IActionResult> ReviewDocument(
@@ -64,3 +71,5 @@ public sealed class AdminUsersController : ControllerBase
         (await _sender.Send(new ReviewUserDocumentCommand(id, documentId, request.Approve, request.Reason), cancellationToken))
             .ToActionResult(this);
 }
+
+public sealed record SetSellerVerificationRequest(bool Verified, string? Reason);

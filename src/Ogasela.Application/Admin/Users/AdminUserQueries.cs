@@ -256,4 +256,13 @@ public static class AdminUserErrors
     public static readonly Error DocumentNotFound = new("AdminUsers.DocumentNotFound", "This document could not be found.");
 
     public static readonly Error DocumentAlreadyReviewed = new("AdminUsers.DocumentAlreadyReviewed", "This document has already been reviewed.");
+
+    public static readonly Error NotASeller = new("AdminUsers.NotASeller", "Only seller accounts can be verified.");
+
+    public static readonly Error AlreadyVerified = new("AdminUsers.AlreadyVerified", "This seller is already verified.");
+
+    public static readonly Error NotVerified = new("AdminUsers.NotVerified", "This seller isn't verified.");
+
+    public static readonly Error NotReadyToVerify = new(
+        "AdminUsers.NotReadyToVerify", "A seller needs an approved ID card and a face photo before they can be verified.");
 }

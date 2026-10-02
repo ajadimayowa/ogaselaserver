@@ -22,6 +22,22 @@ public sealed record RevokeUserSessionsCommand(Guid UserId) : IRequest<Result>;
 /// <summary>Approve, or reject with a reason the user sees. Either way the user gets an inbox notification.</summary>
 public sealed record ReviewUserDocumentCommand(Guid UserId, Guid DocumentId, bool Approve, string? Reason) : IRequest<Result>;
 
+/// <summary>
+/// Staff verify a seller by hand after checking their documents and face photo (the interim route
+/// until in-app biometric verification ships), or revoke it. Verified unlocks publishing ads.
+/// Revoking needs a reason the seller sees; their live ads stay up.
+/// </summary>
+public sealed record SetSellerVerificationCommand(Guid UserId, bool Verified, string? Reason) : IRequest<Result>;
+
+public sealed class SetSellerVerificationCommandValidator : AbstractValidator<SetSellerVerificationCommand>
+{
+    public SetSellerVerificationCommandValidator()
+    {
+        When(x => !x.Verified, () =>
+            RuleFor(x => x.Reason).NotEmpty().WithMessage("Tell the seller why their verification was revoked.").MaximumLength(500));
+    }
+}
+
 public sealed class SuspendUserCommandValidator : AbstractValidator<SuspendUserCommand>
 {
     public SuspendUserCommandValidator() =>
@@ -41,7 +57,8 @@ public sealed class AdminUserCommandHandlers :
     IRequestHandler<SuspendUserCommand, Result>,
     IRequestHandler<ReactivateUserCommand, Result>,
     IRequestHandler<RevokeUserSessionsCommand, Result>,
-    IRequestHandler<ReviewUserDocumentCommand, Result>
+    IRequestHandler<ReviewUserDocumentCommand, Result>,
+    IRequestHandler<SetSellerVerificationCommand, Result>
 {
     private static readonly UserRole[] AppRoles = [UserRole.Buyer, UserRole.Seller];
 
@@ -49,10 +66,13 @@ public sealed class AdminUserCommandHandlers :
     private readonly ICurrentUserService _currentUser;
     private readonly IAuditLogger _auditLogger;
     private readonly IDateTime _dateTime;
+    private readonly IPublisher _publisher;
 
     public AdminUserCommandHandlers(
-        IApplicationDbContext dbContext, ICurrentUserService currentUser, IAuditLogger auditLogger, IDateTime dateTime)
+        IApplicationDbContext dbContext, ICurrentUserService currentUser, IAuditLogger auditLogger, IDateTime dateTime,
+        IPublisher publisher)
     {
+        _publisher = publisher;
         _dbContext = dbContext;
         _currentUser = currentUser;
         _auditLogger = auditLogger;
@@ -200,6 +220,73 @@ public sealed class AdminUserCommandHandlers :
             nameof(UserDocument), document.Id, null,
             JsonSerializer.Serialize(new { document.UserId, document.Type, Reason = request.Reason }), cancellationToken);
         await _dbContext.SaveChangesAsync(cancellationToken);
+        return Result.Success();
+    }
+
+    public async Task<Result> Handle(SetSellerVerificationCommand request, CancellationToken cancellationToken)
+    {
+        var seller = await _dbContext.SellerProfiles.FirstOrDefaultAsync(s => s.UserId == request.UserId, cancellationToken);
+        if (seller is null)
+        {
+            return Result.Failure(AdminUserErrors.NotASeller);
+        }
+
+        var before = seller.VerificationStatus;
+        if (request.Verified && before == VerificationStatus.Verified)
+        {
+            return Result.Failure(AdminUserErrors.AlreadyVerified);
+        }
+
+        if (!request.Verified && before != VerificationStatus.Verified)
+        {
+            return Result.Failure(AdminUserErrors.NotVerified);
+        }
+
+        // Staff verify against evidence, never blind: an approved ID card and a face photo to compare it with.
+        if (request.Verified)
+        {
+            var hasFacePhoto = await _dbContext.Users
+                .AnyAsync(u => u.Id == request.UserId && u.ProfilePhotoS3Key != null, cancellationToken);
+            var hasApprovedId = await _dbContext.UserDocuments.AnyAsync(
+                d => d.UserId == request.UserId && d.Type == UserDocumentType.IdCard && d.Status == UserDocumentStatus.Approved,
+                cancellationToken);
+            if (!hasFacePhoto || !hasApprovedId)
+            {
+                return Result.Failure(AdminUserErrors.NotReadyToVerify);
+            }
+        }
+
+        var now = _dateTime.UtcNow;
+        var reason = request.Reason?.Trim();
+        if (request.Verified)
+        {
+            seller.UpdateVerificationStatus(VerificationStatus.Verified, now);
+        }
+        else
+        {
+            seller.UpdateVerificationStatus(VerificationStatus.NotStarted, null);
+            _dbContext.InboxNotifications.Add(InboxNotification.Create(
+                seller.UserId, InboxNotificationTypes.Verification, "Your seller verification was revoked",
+                $"{reason} Contact support if you think this is a mistake.", null, null, now));
+        }
+
+        await _auditLogger.LogAsync(
+            _currentUser.UserId!.Value, request.Verified ? "Seller.VerifiedByStaff" : "Seller.VerificationRevoked",
+            nameof(SellerProfile), seller.Id,
+            JsonSerializer.Serialize(new { Status = before.ToString() }),
+            JsonSerializer.Serialize(new { Status = seller.VerificationStatus.ToString(), Reason = reason }),
+            cancellationToken);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // Same event as an automatic biometric pass: the seller gets the usual "you're verified"
+        // inbox, push and email notifications.
+        if (request.Verified)
+        {
+            await _publisher.Publish(
+                new Verification.Events.VerificationDecisionEvent(seller.Id, Domain.Verification.VerificationDecision.Verified, now),
+                cancellationToken);
+        }
+
         return Result.Success();
     }
 }

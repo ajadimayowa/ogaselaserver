@@ -54,10 +54,8 @@ public class SellerProfile
     {
         VerificationStatus = status;
 
-        if (status == VerificationStatus.Verified)
-        {
-            VerifiedAt = decidedAt;
-        }
+        // VerifiedAt only describes a current verification - cleared if it's revoked.
+        VerifiedAt = status == VerificationStatus.Verified ? decidedAt : null;
     }
 
     /// <summary>NDPA data-subject deletion: clears identifying business/ID fields. Id/UserId/VerificationStatus/CreatedAt are kept, since Listings/Transactions/TrustScore still reference this SellerId for financial/audit history.</summary>

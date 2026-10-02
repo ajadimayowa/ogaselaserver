@@ -36,6 +36,7 @@ public static class RbacSeeder
         ("users.manage", "Users", "Suspend, reactivate and sign out app users"),
         ("users.documents.review", "Users", "Review user ID and address documents"),
         ("users.changes.review", "Users", "Approve or reject phone, email and business info changes"),
+        ("users.verify", "Users", "Verify sellers (or revoke verification) after reviewing their documents"),
         ("listings.view", "Listings", "View all ads"),
         ("listings.manage", "Listings", "Take down, reinstate and recategorise ads"),
         ("disputes.view", "Disputes", "View buyer-seller disputes"),
