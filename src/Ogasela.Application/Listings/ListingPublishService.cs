@@ -27,8 +27,8 @@ public sealed class ListingPublishService
     private readonly IPaymentAuthorizer _paymentAuthorizer;
     private readonly IFraudRiskScorer _fraudRiskScorer;
     private readonly IDateTime _dateTime;
-    private readonly ListingSettings _settings;
     private readonly AiSettings _aiSettings;
+    private readonly Settings.IPlatformSettings _platformSettings;
 
     public ListingPublishService(
         IApplicationDbContext dbContext,
@@ -44,22 +44,14 @@ public sealed class ListingPublishService
         _paymentAuthorizer = paymentAuthorizer;
         _fraudRiskScorer = fraudRiskScorer;
         _dateTime = dateTime;
-        _settings = settings.Value;
+        // SuperAdmin overrides from Control Portal → Settings, falling back to these appsettings values.
+        _platformSettings = new Settings.PlatformSettingsService(dbContext, settings);
         _aiSettings = aiSettings.Value;
     }
 
+    /// <summary>Publish/repost paid from the wallet: eligibility, then the wallet debit, then submission.</summary>
     public async Task<Result> PublishAsync(Listing listing, CancellationToken cancellationToken)
     {
-        // RULE-01: the seller must be fully verified.
-        try
-        {
-            await _verificationGuard.RequireVerifiedSellerAsync(listing.SellerId, cancellationToken);
-        }
-        catch (SellerNotVerifiedException)
-        {
-            return Result.Failure(ListingErrors.NotVerified);
-        }
-
         // RULE-02: a plan must be selected.
         if (listing.PromotionPlanId is not { } promotionPlanId)
         {
@@ -72,7 +64,57 @@ public sealed class ListingPublishService
             return Result.Failure(ListingErrors.PromotionPlanNotFound);
         }
 
-        if (plan.Name == PromotionPlanName.Free)
+        var eligibility = await CheckEligibilityAsync(listing, plan, cancellationToken);
+        if (eligibility.IsFailure)
+        {
+            return eligibility;
+        }
+
+        if (!plan.IsFree)
+        {
+            // RULE-06: paid plans require authorized payment; never publish on failure.
+            var paymentResult = await _paymentAuthorizer.AuthorizeAsync(listing.SellerId, plan.Id, listing.Id, cancellationToken);
+            if (paymentResult.IsFailure)
+            {
+                return Result.Failure(ListingErrors.PaymentFailed);
+            }
+        }
+
+        await SubmitAsync(listing, plan, cancellationToken);
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Every rule except payment (RULE-01, completeness, the plan's photo limit, RULE-04/05 for the
+    /// Free plan). Checkout runs this before taking any money, so a seller is never charged for an
+    /// ad that can't be submitted.
+    /// </summary>
+    public async Task<Result> CheckEligibilityAsync(Listing listing, PromotionPlan plan, CancellationToken cancellationToken)
+    {
+        // RULE-01: the seller must be fully verified.
+        try
+        {
+            await _verificationGuard.RequireVerifiedSellerAsync(listing.SellerId, cancellationToken);
+        }
+        catch (SellerNotVerifiedException)
+        {
+            return Result.Failure(ListingErrors.NotVerified);
+        }
+
+        // Drafts may be partial; what goes to review must be complete.
+        if (string.IsNullOrWhiteSpace(listing.Title)
+            || string.IsNullOrWhiteSpace(listing.Description)
+            || listing.MediaUrls.Count == 0)
+        {
+            return Result.Failure(ListingErrors.Incomplete);
+        }
+
+        if (plan.PhotoLimit > 0 && listing.MediaUrls.Count > plan.PhotoLimit)
+        {
+            return Result.Failure(ListingErrors.MediaLimitExceeded);
+        }
+
+        if (plan.IsFree)
         {
             // RULE-04: the category must allow the Free plan.
             var category = await _dbContext.Categories.FirstOrDefaultAsync(c => c.Id == listing.CategoryId, cancellationToken);
@@ -91,37 +133,48 @@ public sealed class ListingPublishService
                 l => l.SellerId == listing.SellerId
                      && l.Id != listing.Id
                      && l.PromotionPlanId == plan.Id
-                     && (l.Status == ListingStatus.Active || l.Status == ListingStatus.ExpiringSoon),
+                     && (l.Status == ListingStatus.Active
+                         || l.Status == ListingStatus.ExpiringSoon
+                         || l.Status == ListingStatus.PendingReview),
                 cancellationToken);
 
-            if (activeFreeListings >= _settings.FreePlanCap)
+            if (activeFreeListings >= await _platformSettings.FreePlanCapAsync(cancellationToken))
             {
                 return Result.Failure(ListingErrors.FreePlanCapReached);
             }
         }
+
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Moves a listing whose plan is settled (free, or already paid) on: to moderator review when
+    /// approval is required (the default), otherwise straight live. Runs the fraud-risk check.
+    /// The caller saves.
+    /// </summary>
+    public async Task SubmitAsync(Listing listing, PromotionPlan plan, CancellationToken cancellationToken)
+    {
+        var now = _dateTime.UtcNow;
+        if (await _platformSettings.RequireListingApprovalAsync(cancellationToken))
+        {
+            // Goes live (and the plan's duration starts) only when a moderator approves it -
+            // see ApproveListingCommandHandler. Payment is already taken; a rejection refunds it.
+            listing.SubmitForReview(now);
+        }
         else
         {
-            // RULE-06: paid plans require authorized payment; never publish on failure.
-            var paymentResult = await _paymentAuthorizer.AuthorizeAsync(listing.SellerId, plan.Id, listing.Id, cancellationToken);
-            if (paymentResult.IsFailure)
-            {
-                return Result.Failure(ListingErrors.PaymentFailed);
-            }
+            listing.Publish(now, now.AddDays(plan.DurationDays));
         }
-
-        var now = _dateTime.UtcNow;
-        listing.Publish(now, now.AddDays(plan.DurationDays));
 
         // Fraud-risk scoring is a platform safety net, not a seller-facing tool - it runs for
         // every publish regardless of plan tier and never blocks the listing. Above the
-        // threshold, it only opens a Report for Phase 11's moderation queue to triage.
+        // threshold, it opens a Report for the moderation queue, and the score is shown next to
+        // the listing in the pending-approval queue too.
         var assessment = await _fraudRiskScorer.ScoreAsync(listing, cancellationToken);
         if (assessment.RiskScore >= _aiSettings.FraudRiskThreshold)
         {
             _dbContext.Reports.Add(Report.Create(
                 reporterId: null, ReportTargetType.Listing, listing.Id, assessment.ReasonSummary, now, assessment.RiskScore));
         }
-
-        return Result.Success();
     }
 }

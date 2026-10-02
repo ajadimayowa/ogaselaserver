@@ -37,6 +37,10 @@ public sealed class PaymentsApiFactory : WebApplicationFactory<Program>, IAsyncL
         builder.UseSetting("ConnectionStrings:Default", _postgres.GetConnectionString());
         builder.UseSetting("ConnectionStrings:Redis", _redis.GetConnectionString());
 
+        // Publishing goes live immediately in these tests; the moderator-approval step is
+        // covered on its own by ListingApprovalTests (ApprovalListingsApiFactory).
+        builder.UseSetting("Listings:RequireApproval", "false");
+
         builder.ConfigureTestServices(services =>
         {
             services.RemoveAll<ISmsSender>();

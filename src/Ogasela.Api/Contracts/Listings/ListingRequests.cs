@@ -30,3 +30,5 @@ public sealed record UpdateListingRequest(
     decimal? Longitude = null);
 
 public sealed record UploadListingImageRequest(IFormFile Image);
+
+public sealed record ListingCheckoutRequest(Guid PromotionPlanId, Ogasela.Application.Listings.Checkout.ListingPaymentMethod PaymentMethod);

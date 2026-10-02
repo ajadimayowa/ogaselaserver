@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Ogasela.Api.Contracts.Listings;
@@ -30,18 +31,22 @@ public class FraudRiskPublishTests : IClassFixture<ListingsApiFactory>
     [Fact]
     public async Task Publish_OfAHighFraudRiskListing_StillPublishesButOpensAReportForModeration()
     {
-        var sellerClient = await RegisterAndVerifySellerAsync(_factory);
+        // A listing now needs a photo to be submitted, so the scorer's no-photos signal can't fire
+        // here; the two that do (suspicious language 0.30 + brand-new account 0.15 = 0.45) are
+        // checked against a threshold just below that.
+        var factory = _factory.WithWebHostBuilder(b => b.UseSetting("Ai:FraudRiskThreshold", "0.4"));
+        var sellerClient = await RegisterAndVerifySellerAsync(factory);
 
-        // Deliberately trips three of HeuristicFraudRiskScorer's signals: suspicious
-        // off-platform-payment language, zero photos, and a brand-new seller account (this
-        // test's own seller, registered moments ago) - well past the default 0.5 threshold.
+        // Deliberately trips two of HeuristicFraudRiskScorer's signals: suspicious
+        // off-platform-payment language and a brand-new seller account (this test's own seller,
+        // registered moments ago).
         var request = new CreateListingRequest(
             "URGENT SALE - cash only, no returns",
             "Selling fast, wire transfer preferred, no inspection allowed.",
-            CategorySeedData.ElectronicsId,
+            CategorySeedData.PhonesAndTabletsId,
             Price: 15000m,
             ListingCondition.Used,
-            MediaUrls: [],
+            MediaUrls: ["https://example.com/photo1.jpg"],
             PromotionPlanSeedData.FreeId);
 
         var createResponse = await sellerClient.PostAsJsonAsync("/api/v1/listings", request);
@@ -54,7 +59,7 @@ public class FraudRiskPublishTests : IClassFixture<ListingsApiFactory>
         var published = await publishResponse.Content.ReadFromJsonAsync<ListingResponse>(JsonOptions);
         published!.Status.Should().Be(ListingStatus.Active);
 
-        using var scope = _factory.Services.CreateScope();
+        using var scope = factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<OgaselaDbContext>();
         var report = await dbContext.Reports.FirstOrDefaultAsync(r =>
             r.TargetType == ReportTargetType.Listing && r.TargetId == listing.Id);

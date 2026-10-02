@@ -22,6 +22,16 @@ public class User
     /// <summary>FCM device registration token, if the user has ever registered one. Null means push is a no-op for them.</summary>
     public string? PushToken { get; private set; }
 
+    /// <summary>Private-storage key of the profile photo (taken with the app's face capture), if any.</summary>
+    public string? ProfilePhotoS3Key { get; private set; }
+
+    /// <summary>Set while an admin has suspended the account: it can't sign in by any route until reactivated.</summary>
+    public DateTime? SuspendedAt { get; private set; }
+
+    public string? SuspensionReason { get; private set; }
+
+    public bool IsSuspended => SuspendedAt is not null;
+
     /// <summary>Set true when a staff account's password was just generated for them (onboarding approval) and emailed in plaintext - forces a rotation before anything else, cleared by ChangePasswordCommand.</summary>
     public bool MustChangePassword { get; private set; }
 
@@ -55,6 +65,22 @@ public class User
     }
 
     public void SetPushToken(string? pushToken) => PushToken = pushToken;
+
+    public void UpdateName(string name) => Name = name.Trim();
+
+    public void SetProfilePhoto(string? s3Key) => ProfilePhotoS3Key = s3Key;
+
+    public void Suspend(string reason, DateTime now)
+    {
+        SuspendedAt = now;
+        SuspensionReason = reason;
+    }
+
+    public void Reactivate()
+    {
+        SuspendedAt = null;
+        SuspensionReason = null;
+    }
 
     /// <summary>Generic password-hash mutator. Used by ChangePasswordCommand and by staff-onboarding approval (which generates and hashes a temp password for a newly-approved staff account).</summary>
     public void SetPasswordHash(string passwordHash, bool mustChangePassword = false)
@@ -97,6 +123,7 @@ public class User
         Phone = null;
         Email = null;
         PushToken = null;
+        ProfilePhotoS3Key = null;
         PasswordHash = unusablePasswordHash;
     }
 }

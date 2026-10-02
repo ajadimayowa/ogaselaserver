@@ -46,10 +46,21 @@ public sealed class UpdateCategoryCommandHandler : IRequestHandler<UpdateCategor
                 return Result.Failure<CategoryResponse>(PromotionErrors.CategoryCannotBeOwnParent);
             }
 
-            var parentExists = await _dbContext.Categories.AnyAsync(c => c.Id == parentId, cancellationToken);
-            if (!parentExists)
+            var parent = await _dbContext.Categories.FirstOrDefaultAsync(c => c.Id == parentId, cancellationToken);
+            if (parent is null)
             {
                 return Result.Failure<CategoryResponse>(PromotionErrors.ParentCategoryNotFound);
+            }
+
+            if (parent.ParentCategoryId is not null)
+            {
+                return Result.Failure<CategoryResponse>(PromotionErrors.ParentMustBeTopLevel);
+            }
+
+            var hasSubcategories = await _dbContext.Categories.AnyAsync(c => c.ParentCategoryId == request.Id, cancellationToken);
+            if (hasSubcategories)
+            {
+                return Result.Failure<CategoryResponse>(PromotionErrors.CategoryHasSubcategories);
             }
         }
 

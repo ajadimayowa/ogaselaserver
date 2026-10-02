@@ -6,9 +6,9 @@ using Ogasela.Application.Payments.RefundTransaction;
 
 namespace Ogasela.Api.Controllers.Payments;
 
-/// <summary>FinanceAdmin-only wallet operations support.</summary>
+/// <summary>Wallet operations support for FinanceAdmin and SuperAdmin (the Revenue page).</summary>
 [ApiController]
-[Authorize(Policy = "FinanceAdmin")]
+[Authorize(Roles = "FinanceAdmin,SuperAdmin")]
 public sealed class AdminTransactionsController : ControllerBase
 {
     private readonly ISender _sender;

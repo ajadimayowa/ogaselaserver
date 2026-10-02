@@ -11,12 +11,14 @@ public sealed class CreateReviewCommandHandler : IRequestHandler<CreateReviewCom
     private readonly IApplicationDbContext _dbContext;
     private readonly ICurrentUserService _currentUser;
     private readonly IDateTime _dateTime;
+    private readonly IPublisher _publisher;
 
-    public CreateReviewCommandHandler(IApplicationDbContext dbContext, ICurrentUserService currentUser, IDateTime dateTime)
+    public CreateReviewCommandHandler(IApplicationDbContext dbContext, ICurrentUserService currentUser, IDateTime dateTime, IPublisher publisher)
     {
         _dbContext = dbContext;
         _currentUser = currentUser;
         _dateTime = dateTime;
+        _publisher = publisher;
     }
 
     public async Task<Result<ReviewResponse>> Handle(CreateReviewCommand request, CancellationToken cancellationToken)
@@ -55,6 +57,8 @@ public sealed class CreateReviewCommandHandler : IRequestHandler<CreateReviewCom
         var review = Review.Create(reviewerId, revieweeId, request.ListingId, request.Rating, request.Comment, _dateTime.UtcNow);
         _dbContext.Reviews.Add(review);
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await _publisher.Publish(
+            new ReviewReceivedEvent(revieweeId, reviewerId, request.ListingId, request.Rating, request.Comment), cancellationToken);
 
         return Result.Success(new ReviewResponse(
             review.Id, review.ReviewerId, review.RevieweeId, review.ListingId, review.Rating, review.Comment, review.CreatedAt));

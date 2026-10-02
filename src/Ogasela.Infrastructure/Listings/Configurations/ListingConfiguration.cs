@@ -18,6 +18,7 @@ public sealed class ListingConfiguration : IEntityTypeConfiguration<Listing>
         builder.Property(l => l.Condition).HasConversion<string>().HasMaxLength(32).IsRequired();
         builder.Property(l => l.Status).HasConversion<string>().HasMaxLength(32).IsRequired();
         builder.Property(l => l.Location).HasMaxLength(200);
+        builder.Property(l => l.ReviewNote).HasMaxLength(1000);
         builder.Property(l => l.Latitude).HasPrecision(9, 6);
         builder.Property(l => l.Longitude).HasPrecision(9, 6);
         builder.Property(l => l.CreatedAt).IsRequired();

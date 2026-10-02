@@ -28,7 +28,7 @@ public sealed class GetSellerListingsQueryHandler : IRequestHandler<GetSellerLis
         if (!await IsSameSellerAsync(request.SellerId, cancellationToken))
         {
             // Anyone browsing someone else's storefront (or an anonymous visitor) never sees Drafts.
-            query = query.Where(l => l.Status != ListingStatus.Draft);
+            query = query.Where(l => l.Status != ListingStatus.Draft && l.Status != ListingStatus.PendingReview);
         }
 
         var totalCount = await query.CountAsync(cancellationToken);

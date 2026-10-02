@@ -26,10 +26,15 @@ public sealed class CreateCategoryCommandHandler : IRequestHandler<CreateCategor
     {
         if (request.ParentCategoryId is { } parentId)
         {
-            var parentExists = await _dbContext.Categories.AnyAsync(c => c.Id == parentId, cancellationToken);
-            if (!parentExists)
+            var parent = await _dbContext.Categories.FirstOrDefaultAsync(c => c.Id == parentId, cancellationToken);
+            if (parent is null)
             {
                 return Result.Failure<CategoryResponse>(PromotionErrors.ParentCategoryNotFound);
+            }
+
+            if (parent.ParentCategoryId is not null)
+            {
+                return Result.Failure<CategoryResponse>(PromotionErrors.ParentMustBeTopLevel);
             }
         }
 
@@ -46,6 +51,17 @@ public sealed class CreateCategoryCommandHandler : IRequestHandler<CreateCategor
             request.AttributeSchemaVersion, imageKey, now);
 
         _dbContext.Categories.Add(category);
+
+        // Subcategories inherit the parent's free-eligibility and schema version; each can be
+        // given its own image afterwards via UpdateCategory. Saved in the same SaveChanges so a
+        // category never exists without its subcategories.
+        foreach (var subcategoryName in request.SubcategoryNames)
+        {
+            _dbContext.Categories.Add(Category.Create(
+                Guid.NewGuid(), subcategoryName.Trim(), category.Id, request.IsFreeEligible,
+                request.AttributeSchemaVersion, imageS3Key: null, now));
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return Result.Success(new CategoryResponse(

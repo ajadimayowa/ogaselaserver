@@ -77,19 +77,25 @@ public class SeedDataTests
     }
 
     [Fact]
-    public void CategorySeedData_LoadsStarterCategoriesWithExpectedFreeEligibility()
+    public void CategorySeedData_LoadsStarterCategoriesWithSubcategoriesAndExpectedFreeEligibility()
     {
         using var dbContext = CreateSeededDbContext();
 
-        var categories = dbContext.Categories.ToList();
-        categories.Should().HaveCount(7);
+        var all = dbContext.Categories.ToList();
+        var categories = all.Where(c => c.ParentCategoryId == null).ToList();
+        var subcategories = all.Where(c => c.ParentCategoryId != null).ToList();
 
         categories.Select(c => c.Name).Should().BeEquivalentTo(
             "Electronics", "Fashion", "Vehicles", "Real Estate", "Home & Furniture", "Jobs", "Services");
 
-        categories.Should().OnlyContain(c => c.ParentCategoryId == null, "the starter list has no subcategories seeded");
-        categories.Should().OnlyContain(c => c.AttributeSchemaVersion == 1);
-        categories.Should().OnlyContain(c => c.ImageS3Key == null, "no real images exist to seed yet");
+        // Every top-level category is seeded with subcategories, one level deep, each inheriting
+        // its parent's free-eligibility - listings are posted under a subcategory.
+        categories.Should().OnlyContain(c => subcategories.Any(s => s.ParentCategoryId == c.Id));
+        subcategories.Should().OnlyContain(s => categories.Any(c => c.Id == s.ParentCategoryId));
+        subcategories.Should().OnlyContain(s => s.IsFreeEligible == categories.Single(c => c.Id == s.ParentCategoryId).IsFreeEligible);
+
+        all.Should().OnlyContain(c => c.AttributeSchemaVersion == 1);
+        all.Should().OnlyContain(c => c.ImageS3Key == null, "no real images exist to seed yet");
 
         categories.Where(c => c.Name is "Vehicles" or "Real Estate" or "Jobs")
             .Should().OnlyContain(c => !c.IsFreeEligible);

@@ -41,7 +41,7 @@ public class ListingPublishSuccessTests : IClassFixture<PaidPlanListingsApiFacto
 
         // A fresh seller per plan so the Free-plan case never collides with another case's cap usage.
         var client = await RegisterAndVerifySellerAsync(_factory);
-        var listing = await CreateDraftListingAsync(client, CategorySeedData.ElectronicsId, planId);
+        var listing = await CreateDraftListingAsync(client, CategorySeedData.PhonesAndTabletsId, planId);
 
         var response = await PublishAsync(client, listing.Id);
 

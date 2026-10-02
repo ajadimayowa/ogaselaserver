@@ -18,6 +18,9 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.PasswordHash).IsRequired();
         builder.Property(u => u.Role).HasConversion<string>().HasMaxLength(32).IsRequired();
         builder.Property(u => u.PushToken).HasMaxLength(500);
+        builder.Property(u => u.ProfilePhotoS3Key).HasMaxLength(500);
+        builder.Property(u => u.SuspensionReason).HasMaxLength(500);
+        builder.Ignore(u => u.IsSuspended);
         builder.Property(u => u.CreatedAt).IsRequired();
 
         builder.HasIndex(u => u.Phone).IsUnique().HasFilter("\"Phone\" IS NOT NULL");

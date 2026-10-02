@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Ogasela.Application.Common.Interfaces;
 using Ogasela.Domain.Accounts;
+using Ogasela.Domain.Analytics;
 using Ogasela.Domain.AdIntegrations;
 using Ogasela.Domain.Geo;
 using Ogasela.Domain.Listings;
@@ -35,6 +36,26 @@ public sealed class TestApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<SellerProfile> SellerProfiles => Set<SellerProfile>();
 
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
+    public DbSet<ExternalLogin> ExternalLogins => Set<ExternalLogin>();
+
+    public DbSet<ListingDailyStat> ListingDailyStats => Set<ListingDailyStat>();
+
+    public DbSet<SellerDailyStat> SellerDailyStats => Set<SellerDailyStat>();
+
+    public DbSet<Announcement> Announcements => Set<Announcement>();
+
+    public DbSet<InboxNotification> InboxNotifications => Set<InboxNotification>();
+
+    public DbSet<UserDocument> UserDocuments => Set<UserDocument>();
+
+    public DbSet<ProfileChangeRequest> ProfileChangeRequests => Set<ProfileChangeRequest>();
+
+    public DbSet<Dispute> Disputes => Set<Dispute>();
+
+    public DbSet<Ogasela.Domain.Settings.PlatformSetting> PlatformSettings => Set<Ogasela.Domain.Settings.PlatformSetting>();
+
+    public DbSet<DisputeMessage> DisputeMessages => Set<DisputeMessage>();
 
     public DbSet<BiometricVerification> BiometricVerifications => Set<BiometricVerification>();
 
@@ -112,6 +133,9 @@ public sealed class TestApplicationDbContext : DbContext, IApplicationDbContext
     {
         base.OnModelCreating(modelBuilder);
         modelBuilder.Entity<TrustScore>().HasKey(t => t.SellerId);
+        modelBuilder.Entity<ListingDailyStat>().HasKey(s => new { s.ListingId, s.Date });
+        modelBuilder.Entity<SellerDailyStat>().HasKey(s => new { s.SellerId, s.Date });
+        modelBuilder.Entity<Ogasela.Domain.Settings.PlatformSetting>().HasKey(s => s.Key);
     }
 
     /// <summary>EF Core's InMemory provider doesn't support real transactions, so this just runs the operation directly.</summary>

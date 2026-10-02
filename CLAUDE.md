@@ -115,6 +115,14 @@ in-memory fake instead of a real Redis instance — see
 code via `ISmsSender` (see Notifications below); `IOtpService.PeekAsync` still exists for resend
 flows and is how integration tests read the code without an SMS inbox.
 
+**Master OTP.** `OtpSettings.MasterCode` (`Default_Global_OTP` in `.env`, config key
+`Otp:MasterCode`) is accepted by `OtpService.VerifyAsync` in place of the generated code for every
+OTP check, whether or not a code was sent; the generated code keeps working too. It still counts
+against the attempt limit, and each use is logged as a warning. It is **never honoured in the
+Production environment**: `Program.cs` clears it there whatever `.env` says (logging that it was
+ignored), and logs a startup warning when it's active anywhere else - see
+`MasterOtpEnvironmentTests`. Note an unset `ASPNETCORE_ENVIRONMENT` means Production.
+
 **Refresh token rotation.** `AuthTokenIssuer` (`Application/Accounts`) is the single place that
 mints an access/refresh pair and persists the (hashed) refresh token; both `LoginCommandHandler`
 and `RefreshTokenCommandHandler` go through it so the two flows can't drift. On refresh,
@@ -168,15 +176,20 @@ command — a delivery hiccup shouldn't block registration or force the client t
 when the code/account was in fact created; the client can retry `/otp/request` if the SMS
 didn't arrive.
 
-**Secrets — never in `appsettings.json`.** `Termii:ApiKey` and `Email:SmtpKey` are real,
-live, billable credentials and must never be committed. `appsettings.json` only has the
-non-secret config (base URL, sender ID, SMTP host/port/login); the keys are empty strings
-there. Locally, `dotnet run` picks them up from **.NET User Secrets**
-(`dotnet user-secrets list` from `src/Ogasela.Api`); for Docker, `docker-compose.yml`
-references `${TERMII_API_KEY}` / `${EMAIL_SMTP_KEY}`, which Compose reads from a `.env` file
-at the repo root (gitignored — copy `.env.example` and fill it in; `docker compose up` fails
-fast with a clear message if it's missing). If you rotate either credential, update both
-places.
+**Secrets — only in `.env`, never in `appsettings.json` or User Secrets.** Every credential
+(`Termii:ApiKey`, `Email:SmtpKey`, JWT, AWS, payment, AI, social-login keys, ...) lives in the
+gitignored `.env` at the repo root - copy `.env.example` and fill it in. `appsettings.json` only
+has the non-secret config, with empty strings for the secret values. The same `.env` serves both
+ways of running:
+- **`dotnet run`** - `Api/Common/DotEnvConfiguration.cs` reads `.env` at startup and maps each
+  name (e.g. `TERMII_API_KEY`) to its config key (`Termii:ApiKey`). It sits just above the
+  appsettings files, so real environment variables and command-line settings still win. The project has no `UserSecretsId`; don't add one.
+- **Docker** - `docker-compose.yml` maps the same names into the container's environment
+  (`docker compose up` fails fast if a required one is missing). `.env` itself is kept out of
+  the image by `.dockerignore`.
+
+Adding a credential: put it in `.env` (and a blank entry in `.env.example`), then add the name
+to both `DotEnvConfiguration.Map` and `docker-compose.yml`.
 
 **Testing note.** `AccountsApiFactory` replaces `ISmsSender`/`IEmailSender` with no-op fakes
 (`Ogasela.IntegrationTests/Accounts/NoOpNotificationSenders.cs`) via `ConfigureTestServices` —
@@ -222,3 +235,17 @@ via `WebApplicationFactory<Program>`; connection strings are injected with
 because `Program.cs` reads `builder.Configuration.GetConnectionString(...)` before
 `builder.Build()` runs and `ConfigureAppConfiguration` callbacks are wired in too late for the
 minimal-hosting model to see them at that point.
+
+**Ad checkout (posting an ad).** A listing is a `Draft` from the app's first "Continue" until its
+plan is paid for - drafts may be partial (empty description, no photos). `POST
+/listings/{id}/checkout` (`Application/Listings/Checkout/ListingCheckout.cs`) runs every publish
+rule except payment first (`ListingPublishService.CheckEligibilityAsync`: verified seller, title +
+description + at least one photo, the plan's photo limit, Free-plan rules), so money is never taken
+for an ad that can't be submitted. Free and Wallet settle in that call; Card creates a Pending
+`PlanPurchase` transaction linked to the listing and returns the gateway URL. A card payment is
+settled by `ListingPaymentSettlement` - called both by the payment webhook and by `POST
+.../checkout/{reference}/confirm` (the app calls it when the payment page closes, since webhooks
+can lag and never reach a local API). Settlement is idempotent, and if a confirmed payment can't
+submit the listing (already paid another way, no longer eligible, underpaid) the money goes to the
+seller's wallet - it's never lost. A settled listing goes to `PendingReview` (or live if
+`Listings:RequireApproval` is off); a rejection refunds the plan to the wallet.

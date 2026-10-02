@@ -7,7 +7,8 @@ namespace Ogasela.Application.Reviews.GetSellerReviews;
 public sealed record GetSellerReviewsQuery(Guid SellerId, int Page = 1, int PageSize = 20)
     : IRequest<Result<PagedReviewsResponse>>;
 
-public sealed record ReviewListItem(Guid Id, Guid ReviewerId, int Rating, string Comment, DateTime CreatedAt);
+/// <summary>ReviewerName is the reviewer's display name, or null if they never set one.</summary>
+public sealed record ReviewListItem(Guid Id, Guid ReviewerId, int Rating, string Comment, DateTime CreatedAt, string? ReviewerName = null);
 
 public sealed record PagedReviewsResponse(
     IReadOnlyList<ReviewListItem> Items, int Page, int PageSize, int TotalCount, decimal AverageRating);

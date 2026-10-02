@@ -17,6 +17,10 @@ public sealed class CreateCategoryRequest
     [FromForm(Name = "attributeSchemaVersion")]
     public int AttributeSchemaVersion { get; set; } = 1;
 
+    /// <summary>Required (at least one) when creating a top-level category; must be empty when ParentCategoryId is set. Send one "subcategories" form field per name.</summary>
+    [FromForm(Name = "subcategories")]
+    public List<string> Subcategories { get; set; } = [];
+
     /// <summary>The category image when creating a top-level category, or the subcategory image when ParentCategoryId is set. Optional.</summary>
     [FromForm(Name = "image")]
     public IFormFile? Image { get; set; }

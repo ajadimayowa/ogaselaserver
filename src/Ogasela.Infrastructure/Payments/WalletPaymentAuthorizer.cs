@@ -35,7 +35,7 @@ public sealed class WalletPaymentAuthorizer : IPaymentAuthorizer
             return Result.Failure<PaymentReceipt>(PaymentErrors.PlanNotFound);
         }
 
-        if (plan.Name == PromotionPlanName.Free)
+        if (plan.IsFree)
         {
             return Result.Success(new PaymentReceipt(Guid.NewGuid(), sellerId, promotionPlanId, 0m, _dateTime.UtcNow));
         }

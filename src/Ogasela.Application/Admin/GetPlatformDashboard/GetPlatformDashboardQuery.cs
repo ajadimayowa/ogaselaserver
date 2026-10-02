@@ -15,7 +15,7 @@ public sealed record PlatformDashboardResponse(
     VerificationFunnelResponse VerificationFunnel,
     decimal AdBoostAdoptionRate);
 
-public sealed record PlanRevenue(PromotionPlanName Plan, decimal RevenueKobo, int PurchaseCount);
+public sealed record PlanRevenue(string Plan, decimal RevenueKobo, int PurchaseCount);
 
 /// <summary>VerifiedRate/FailedRate are each measured against everyone who has left NotStarted (Pending + ManualReview + Verified + Failed), not against every SellerProfile ever created.</summary>
 public sealed record VerificationFunnelResponse(

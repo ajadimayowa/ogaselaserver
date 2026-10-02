@@ -34,11 +34,16 @@ public sealed class GetSellerReviewsQueryHandler : IRequestHandler<GetSellerRevi
         var totalCount = await query.CountAsync(cancellationToken);
         var averageRating = totalCount == 0 ? 0m : await query.AverageAsync(r => (decimal)r.Rating, cancellationToken);
 
-        var items = await query
-            .OrderByDescending(r => r.CreatedAt)
+        var items = await (
+            from review in query
+            join reviewer in _dbContext.Users on review.ReviewerId equals reviewer.Id into reviewers
+            from reviewer in reviewers.DefaultIfEmpty()
+            orderby review.CreatedAt descending
+            select new ReviewListItem(
+                review.Id, review.ReviewerId, review.Rating, review.Comment, review.CreatedAt,
+                reviewer == null ? null : reviewer.Name))
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(r => new ReviewListItem(r.Id, r.ReviewerId, r.Rating, r.Comment, r.CreatedAt))
             .ToListAsync(cancellationToken);
 
         return Result.Success(new PagedReviewsResponse(items, page, pageSize, totalCount, Math.Round(averageRating, 2)));

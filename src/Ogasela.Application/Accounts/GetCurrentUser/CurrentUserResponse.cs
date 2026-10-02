@@ -13,7 +13,8 @@ public sealed record CurrentUserResponse(
     DateTime CreatedAt,
     bool MustChangePassword,
     SellerProfileResponse? SellerProfile,
-    StaffProfileResponse? StaffProfile);
+    StaffProfileResponse? StaffProfile,
+    string? ProfilePhotoUrl = null);
 
 public sealed record SellerProfileResponse(
     Guid Id,
@@ -21,7 +22,8 @@ public sealed record SellerProfileResponse(
     string? RcNumber,
     string? Nin,
     VerificationStatus VerificationStatus,
-    DateTime? VerifiedAt);
+    DateTime? VerifiedAt,
+    string? StoreAddress = null);
 
 /// <summary>
 /// Lets the frontend gate routes by permission/roleType and show a force-password-change screen

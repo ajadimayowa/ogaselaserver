@@ -6,7 +6,7 @@ public sealed class GenerateDescriptionCommandValidator : AbstractValidator<Gene
 {
     public GenerateDescriptionCommandValidator()
     {
-        RuleFor(x => x.PromotionPlanId).NotEmpty();
+        RuleFor(x => x.PromotionPlanId).NotEqual(Guid.Empty).When(x => x.PromotionPlanId is not null);
 
         RuleFor(x => x)
             .Must(x => !string.IsNullOrWhiteSpace(x.Keywords) || !string.IsNullOrWhiteSpace(x.ImageRef))

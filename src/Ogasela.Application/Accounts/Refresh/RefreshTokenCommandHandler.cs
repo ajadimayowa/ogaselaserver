@@ -61,6 +61,11 @@ public sealed class RefreshTokenCommandHandler : IRequestHandler<RefreshTokenCom
             return Result.Failure<AuthTokenResponse>(AccountErrors.UserNotFound);
         }
 
+        if (user.IsSuspended)
+        {
+            return Result.Failure<AuthTokenResponse>(AccountErrors.AccountSuspended);
+        }
+
         var response = await _tokenIssuer.IssueAsync(user, existingToken, cancellationToken);
         return Result.Success(response);
     }

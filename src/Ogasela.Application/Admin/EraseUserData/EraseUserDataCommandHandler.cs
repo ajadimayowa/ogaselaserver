@@ -104,6 +104,14 @@ public sealed class EraseUserDataCommandHandler : IRequestHandler<EraseUserDataC
             refreshToken.Revoke(now);
         }
 
+        // Identity documents are personal data too - remove the records (their files are private and
+        // unreachable once the records are gone; storage cleanup can sweep them).
+        var documents = await _dbContext.UserDocuments.Where(d => d.UserId == user.Id).ToListAsync(cancellationToken);
+        _dbContext.UserDocuments.RemoveRange(documents);
+
+        var changeRequests = await _dbContext.ProfileChangeRequests.Where(r => r.UserId == user.Id).ToListAsync(cancellationToken);
+        _dbContext.ProfileChangeRequests.RemoveRange(changeRequests);
+
         // Hashing a random value (never a real password) so the account is permanently unable to
         // authenticate - Verify() can never match it, by construction.
         user.Anonymize(_passwordHasher.Hash(Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N")));

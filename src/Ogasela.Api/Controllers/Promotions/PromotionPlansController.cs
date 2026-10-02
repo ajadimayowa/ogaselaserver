@@ -8,7 +8,7 @@ using Ogasela.Application.Promotions.UpdatePromotionPlan;
 
 namespace Ogasela.Api.Controllers.Promotions;
 
-/// <summary>Listing the catalog of promotion plans is public; editing a plan's terms (pricing, photo limits, AI tier, ad-push eligibility, etc.) is SuperAdmin-only.</summary>
+/// <summary>Listing the catalog of promotion plans is public; adding plans and editing their terms (name, price, what they offer, limits) is SuperAdmin-only.</summary>
 [ApiController]
 public sealed class PromotionPlansController : ControllerBase
 {
@@ -19,11 +19,25 @@ public sealed class PromotionPlansController : ControllerBase
         _sender = sender;
     }
 
-    /// <summary>Public - every promotion plan (Free/Basic/Standard/Premium), including inactive ones.</summary>
+    /// <summary>Public - every promotion plan, cheapest first, including inactive ones.</summary>
     [HttpGet("api/v1/promotion-plans")]
     public async Task<IActionResult> GetPromotionPlans(CancellationToken cancellationToken)
     {
         var result = await _sender.Send(new GetPromotionPlansQuery(), cancellationToken);
+        return result.ToActionResult(this);
+    }
+
+    /// <summary>Adds a plan sellers can choose when posting an ad. Only one ₦0 (free) plan may exist.</summary>
+    [HttpPost("api/v1/admin/promotion-plans")]
+    [Authorize(Policy = "SuperAdmin")]
+    public async Task<IActionResult> CreatePromotionPlan(UpdatePromotionPlanRequest request, CancellationToken cancellationToken)
+    {
+        var command = new CreatePromotionPlanCommand(
+            request.Name, request.Description, request.Features ?? [], request.DurationDays, request.PhotoLimit,
+            request.VideoAllowed, request.BoostWeight, request.Price, request.AiToolTier, request.AdPlatformPushAllowed,
+            request.BundledAdCreditKobo, request.IsActive);
+
+        var result = await _sender.Send(command, cancellationToken);
         return result.ToActionResult(this);
     }
 
@@ -34,16 +48,9 @@ public sealed class PromotionPlansController : ControllerBase
         Guid id, UpdatePromotionPlanRequest request, CancellationToken cancellationToken)
     {
         var command = new UpdatePromotionPlanCommand(
-            id,
-            request.DurationDays,
-            request.PhotoLimit,
-            request.VideoAllowed,
-            request.BoostWeight,
-            request.Price,
-            request.AiToolTier,
-            request.AdPlatformPushAllowed,
-            request.BundledAdCreditKobo,
-            request.IsActive);
+            id, request.Name, request.Description, request.Features ?? [], request.DurationDays, request.PhotoLimit,
+            request.VideoAllowed, request.BoostWeight, request.Price, request.AiToolTier, request.AdPlatformPushAllowed,
+            request.BundledAdCreditKobo, request.IsActive);
 
         var result = await _sender.Send(command, cancellationToken);
         return result.ToActionResult(this);

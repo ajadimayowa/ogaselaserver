@@ -1,7 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Ogasela.Application.Common.Interfaces;
-using Ogasela.Domain.Accounts;
 using Ogasela.Shared;
 
 namespace Ogasela.Application.Accounts.UpdateProfile;
@@ -31,15 +30,7 @@ public sealed class UpdateProfileCommandHandler : IRequestHandler<UpdateProfileC
             return Result.Failure(AccountErrors.UserNotFound);
         }
 
-        user.UpdateContactDetails(request.Phone, request.Email);
-
-        if (user.Role == UserRole.Seller && !string.IsNullOrWhiteSpace(request.BusinessName))
-        {
-            var sellerProfile = await _dbContext.SellerProfiles
-                .FirstOrDefaultAsync(s => s.UserId == user.Id, cancellationToken);
-
-            sellerProfile?.UpdateBusinessName(request.BusinessName);
-        }
+        user.UpdateName(request.Name);
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         return Result.Success();

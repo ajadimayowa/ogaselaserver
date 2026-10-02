@@ -7,12 +7,16 @@ using Ogasela.Api.Contracts.Accounts;
 using Ogasela.Api.RateLimiting;
 using Ogasela.Application.Accounts.AdminLogin;
 using Ogasela.Application.Accounts.ChangePassword;
+using Ogasela.Application.Accounts.ConfirmAdminPasswordReset;
 using Ogasela.Application.Accounts.ConfirmPasswordReset;
 using Ogasela.Application.Accounts.Login;
 using Ogasela.Application.Accounts.Logout;
 using Ogasela.Application.Accounts.Refresh;
 using Ogasela.Application.Accounts.RegisterUser;
+using Ogasela.Application.Accounts.RequestAdminPasswordReset;
 using Ogasela.Application.Accounts.RequestOtp;
+using Ogasela.Application.Accounts.RequestPasswordReset;
+using Ogasela.Application.Accounts.SocialLogin;
 using Ogasela.Application.Accounts.VerifyAdminLoginOtp;
 using Ogasela.Application.Accounts.VerifyLoginOtp;
 using Ogasela.Application.Accounts.VerifyOtp;
@@ -67,16 +71,28 @@ public sealed class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// Completes a password reset: request a code first via otp/request (same endpoint used for
-    /// any other phone verification - nothing ties it to "reset" specifically), then call this
-    /// with that code and the new password. No prior authentication needed - having the code at
-    /// all already proves phone ownership.
+    /// Step 1 of a password reset: sends a 6-digit code by the channel the user chose - Email
+    /// (with Email) or Phone (with Phone) - if it belongs to a Buyer/Seller account. Always returns
+    /// success so it can't be used to discover which emails/numbers are registered.
+    /// </summary>
+    [HttpPost("password-reset/request")]
+    public async Task<IActionResult> RequestPasswordReset(RequestPasswordResetRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(
+            new RequestPasswordResetCommand(request.Channel, request.Email, request.Phone), cancellationToken);
+        return result.ToActionResult(this);
+    }
+
+    /// <summary>
+    /// Step 2: the code plus the new password, with the same Email or Phone the code went to.
+    /// (A phone code from the older otp/request also works.) Signs the account out of every
+    /// existing session.
     /// </summary>
     [HttpPost("password-reset/confirm")]
     public async Task<IActionResult> ConfirmPasswordReset(ConfirmPasswordResetRequest request, CancellationToken cancellationToken)
     {
         var result = await _sender.Send(
-            new ConfirmPasswordResetCommand(request.Phone, request.Code, request.NewPassword), cancellationToken);
+            new ConfirmPasswordResetCommand(request.Phone, request.Code, request.NewPassword, request.Email), cancellationToken);
         return result.ToActionResult(this);
     }
 
@@ -120,6 +136,41 @@ public sealed class AuthController : ControllerBase
     public async Task<IActionResult> VerifyAdminLoginOtp(VerifyAdminLoginOtpRequest request, CancellationToken cancellationToken)
     {
         var result = await _sender.Send(new VerifyAdminLoginOtpCommand(request.Email, request.Code), cancellationToken);
+        return result.ToActionResult(this);
+    }
+
+    /// <summary>
+    /// Step 1 of the admin portal's "forgot password" flow: email only. If it belongs to an
+    /// internal account, a reset code is sent to that account's email and phone. Always returns
+    /// success either way so the endpoint can't be used to discover which emails are staff
+    /// accounts. Complete with admin/password-reset/confirm.
+    /// </summary>
+    [HttpPost("admin/password-reset/request")]
+    public async Task<IActionResult> RequestAdminPasswordReset(RequestAdminPasswordResetRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(new RequestAdminPasswordResetCommand(request.Email), cancellationToken);
+        return result.ToActionResult(this);
+    }
+
+    /// <summary>Step 2: the code admin/password-reset/request sent, plus the new password. Signs the account out of every existing session.</summary>
+    [HttpPost("admin/password-reset/confirm")]
+    public async Task<IActionResult> ConfirmAdminPasswordReset(ConfirmAdminPasswordResetRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(
+            new ConfirmAdminPasswordResetCommand(request.Email, request.Code, request.NewPassword), cancellationToken);
+        return result.ToActionResult(this);
+    }
+
+    /// <summary>
+    /// Sign in or sign up with Google, Apple or Facebook in one step - returns tokens directly
+    /// (the provider already authenticated the user, so there's no OTP step). Links to an existing
+    /// account when the provider's verified email matches it. Internal roles can't use this.
+    /// </summary>
+    [HttpPost("social")]
+    public async Task<IActionResult> SocialLogin(SocialLoginRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(
+            new SocialLoginCommand(request.Provider, request.Token, request.Name, request.AccountType), cancellationToken);
         return result.ToActionResult(this);
     }
 

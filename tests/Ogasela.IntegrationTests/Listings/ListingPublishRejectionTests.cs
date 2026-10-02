@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Ogasela.Api.Contracts.Listings;
 using Ogasela.Application.Listings.GetListing;
 using Ogasela.Domain.Listings;
 using Ogasela.Infrastructure.Listings;
@@ -31,7 +32,7 @@ public class ListingPublishRejectionTests : IClassFixture<ListingsApiFactory>
     public async Task Publish_WhenSellerIsNotVerified_IsRejected()
     {
         var client = await RegisterSellerAsync(_factory);
-        var listing = await CreateDraftListingAsync(client, CategorySeedData.ElectronicsId, PromotionPlanSeedData.FreeId);
+        var listing = await CreateDraftListingAsync(client, CategorySeedData.PhonesAndTabletsId, PromotionPlanSeedData.FreeId);
 
         var response = await PublishAsync(client, listing.Id);
 
@@ -41,10 +42,24 @@ public class ListingPublishRejectionTests : IClassFixture<ListingsApiFactory>
     }
 
     [Fact]
+    public async Task CreateDraft_DirectlyInATopLevelCategory_IsAllowed()
+    {
+        // A subcategory is optional - an ad can sit directly in its top-level category.
+        var client = await RegisterAndVerifySellerAsync(_factory);
+        var request = new CreateListingRequest(
+            "A great item", "In excellent condition", CategorySeedData.ElectronicsId, 5000m, ListingCondition.Used,
+            ["https://example.com/photo1.jpg"], PromotionPlanSeedData.FreeId);
+
+        var response = await client.PostAsJsonAsync("/api/v1/listings", request);
+
+        response.IsSuccessStatusCode.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task Publish_WithFreePlanInANonFreeEligibleCategory_IsRejected()
     {
         var client = await RegisterAndVerifySellerAsync(_factory);
-        var listing = await CreateDraftListingAsync(client, CategorySeedData.VehiclesId, PromotionPlanSeedData.FreeId);
+        var listing = await CreateDraftListingAsync(client, CategorySeedData.CarsId, PromotionPlanSeedData.FreeId);
 
         var response = await PublishAsync(client, listing.Id);
 
@@ -60,10 +75,10 @@ public class ListingPublishRejectionTests : IClassFixture<ListingsApiFactory>
 
         for (var i = 0; i < 3; i++)
         {
-            await CreateAndPublishFreeListingAsync(client, CategorySeedData.ElectronicsId);
+            await CreateAndPublishFreeListingAsync(client, CategorySeedData.PhonesAndTabletsId);
         }
 
-        var fourthListing = await CreateDraftListingAsync(client, CategorySeedData.ElectronicsId, PromotionPlanSeedData.FreeId);
+        var fourthListing = await CreateDraftListingAsync(client, CategorySeedData.PhonesAndTabletsId, PromotionPlanSeedData.FreeId);
         var response = await PublishAsync(client, fourthListing.Id);
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
@@ -75,7 +90,7 @@ public class ListingPublishRejectionTests : IClassFixture<ListingsApiFactory>
     public async Task Publish_WithAPaidPlanWhenPaymentIsNotAuthorized_IsRejectedAndNeverActivated()
     {
         var client = await RegisterAndVerifySellerAsync(_factory);
-        var listing = await CreateDraftListingAsync(client, CategorySeedData.ElectronicsId, PromotionPlanSeedData.BasicId);
+        var listing = await CreateDraftListingAsync(client, CategorySeedData.PhonesAndTabletsId, PromotionPlanSeedData.BasicId);
 
         var response = await PublishAsync(client, listing.Id);
 
@@ -95,12 +110,12 @@ public class ListingPublishRejectionTests : IClassFixture<ListingsApiFactory>
 
         // Publish listing A first (while no other Free listing is active), then sell it so it
         // no longer counts toward the cap, before filling the cap with three fresh listings.
-        var listingA = await CreateAndPublishFreeListingAsync(client, CategorySeedData.ElectronicsId);
+        var listingA = await CreateAndPublishFreeListingAsync(client, CategorySeedData.PhonesAndTabletsId);
         (await MarkSoldAsync(client, listingA.Id)).EnsureSuccessStatusCode();
 
         for (var i = 0; i < 3; i++)
         {
-            await CreateAndPublishFreeListingAsync(client, CategorySeedData.ElectronicsId);
+            await CreateAndPublishFreeListingAsync(client, CategorySeedData.PhonesAndTabletsId);
         }
 
         // Now three other Free listings are Active (cap reached); reposting the sold listing
@@ -116,7 +131,7 @@ public class ListingPublishRejectionTests : IClassFixture<ListingsApiFactory>
     public async Task Repost_OfAnExpiredFreeListing_SucceedsAndReactivatesWithANewExpiryDate()
     {
         var client = await RegisterAndVerifySellerAsync(_factory);
-        var listing = await CreateAndPublishFreeListingAsync(client, CategorySeedData.ElectronicsId);
+        var listing = await CreateAndPublishFreeListingAsync(client, CategorySeedData.PhonesAndTabletsId);
 
         await BackdateExpiryAndRunExpiryJobAsync(listing.Id);
 
@@ -133,7 +148,7 @@ public class ListingPublishRejectionTests : IClassFixture<ListingsApiFactory>
     public async Task ExpiryJob_TransitionsAnActiveListingToExpired_OnceExpiresAtHasPassed()
     {
         var client = await RegisterAndVerifySellerAsync(_factory);
-        var listing = await CreateAndPublishFreeListingAsync(client, CategorySeedData.ElectronicsId);
+        var listing = await CreateAndPublishFreeListingAsync(client, CategorySeedData.PhonesAndTabletsId);
 
         await BackdateExpiryAndRunExpiryJobAsync(listing.Id);
 

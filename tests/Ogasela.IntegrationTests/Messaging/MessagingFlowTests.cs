@@ -24,7 +24,7 @@ public class MessagingFlowTests : IClassFixture<MessagingApiFactory>
     public async Task StartConversation_FromAListing_CreatesAConversationBetweenBuyerAndListingOwner()
     {
         var sellerClient = await RegisterAndVerifySellerAsync(_factory);
-        var listing = await CreateAndPublishFreeListingAsync(sellerClient, CategorySeedData.ElectronicsId);
+        var listing = await CreateAndPublishFreeListingAsync(sellerClient, CategorySeedData.PhonesAndTabletsId);
 
         var buyerClient = await RegisterSellerAsync(_factory);
         var buyerId = await GetCurrentUserIdAsync(buyerClient);
@@ -44,7 +44,7 @@ public class MessagingFlowTests : IClassFixture<MessagingApiFactory>
     public async Task StartConversation_CalledTwiceForTheSameBuyerSellerListingTriple_ReturnsTheSameConversation()
     {
         var sellerClient = await RegisterAndVerifySellerAsync(_factory);
-        var listing = await CreateAndPublishFreeListingAsync(sellerClient, CategorySeedData.ElectronicsId);
+        var listing = await CreateAndPublishFreeListingAsync(sellerClient, CategorySeedData.PhonesAndTabletsId);
         var buyerClient = await RegisterSellerAsync(_factory);
 
         var firstResponse = await buyerClient.PostAsJsonAsync("/api/v1/conversations", new StartConversationRequest(listing.Id));
@@ -61,7 +61,7 @@ public class MessagingFlowTests : IClassFixture<MessagingApiFactory>
     public async Task SendMessage_ThenGetMessages_PersistsAndReturnsTheMessage()
     {
         var sellerClient = await RegisterAndVerifySellerAsync(_factory);
-        var listing = await CreateAndPublishFreeListingAsync(sellerClient, CategorySeedData.ElectronicsId);
+        var listing = await CreateAndPublishFreeListingAsync(sellerClient, CategorySeedData.PhonesAndTabletsId);
         var buyerClient = await RegisterSellerAsync(_factory);
 
         var startResponse = await buyerClient.PostAsJsonAsync("/api/v1/conversations", new StartConversationRequest(listing.Id));
@@ -87,7 +87,7 @@ public class MessagingFlowTests : IClassFixture<MessagingApiFactory>
     public async Task SendMessage_AfterTheRecipientBlocksTheSender_IsRejected()
     {
         var sellerClient = await RegisterAndVerifySellerAsync(_factory);
-        var listing = await CreateAndPublishFreeListingAsync(sellerClient, CategorySeedData.ElectronicsId);
+        var listing = await CreateAndPublishFreeListingAsync(sellerClient, CategorySeedData.PhonesAndTabletsId);
         var buyerClient = await RegisterSellerAsync(_factory);
         var buyerId = await GetCurrentUserIdAsync(buyerClient);
 

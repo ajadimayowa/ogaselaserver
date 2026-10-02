@@ -26,11 +26,14 @@ public class Transaction
 
     public DateTime CreatedAt { get; private set; }
 
+    /// <param name="relatedListingId">Set for a card payment of a listing's plan (a PlanPurchase through the gateway).</param>
     public static Transaction CreatePending(
-        Guid sellerId, TransactionType type, decimal amountKobo, string gatewayReference, DateTime now)
+        Guid sellerId, TransactionType type, decimal amountKobo, string gatewayReference, DateTime now,
+        Guid? relatedListingId = null)
     {
         return new Transaction
         {
+            RelatedListingId = relatedListingId,
             Id = Guid.NewGuid(),
             SellerId = sellerId,
             Type = type,

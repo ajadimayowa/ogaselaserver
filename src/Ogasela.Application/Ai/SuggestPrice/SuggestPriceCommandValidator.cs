@@ -6,7 +6,7 @@ public sealed class SuggestPriceCommandValidator : AbstractValidator<SuggestPric
 {
     public SuggestPriceCommandValidator()
     {
-        RuleFor(x => x.PromotionPlanId).NotEmpty();
+        RuleFor(x => x.PromotionPlanId).NotEqual(Guid.Empty).When(x => x.PromotionPlanId is not null);
         RuleFor(x => x.CategoryId).NotEmpty();
         RuleFor(x => x.Title).NotEmpty().MaximumLength(150);
     }

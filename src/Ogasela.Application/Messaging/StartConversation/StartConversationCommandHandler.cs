@@ -1,4 +1,5 @@
 using MediatR;
+using Ogasela.Application.Analytics;
 using Microsoft.EntityFrameworkCore;
 using Ogasela.Application.Common.Interfaces;
 using Ogasela.Domain.Messaging;
@@ -11,9 +12,12 @@ public sealed class StartConversationCommandHandler : IRequestHandler<StartConve
     private readonly IApplicationDbContext _dbContext;
     private readonly ICurrentUserService _currentUser;
     private readonly IDateTime _dateTime;
+    private readonly IEngagementTracker _engagementTracker;
 
-    public StartConversationCommandHandler(IApplicationDbContext dbContext, ICurrentUserService currentUser, IDateTime dateTime)
+    public StartConversationCommandHandler(
+        IApplicationDbContext dbContext, ICurrentUserService currentUser, IDateTime dateTime, IEngagementTracker engagementTracker)
     {
+        _engagementTracker = engagementTracker;
         _dbContext = dbContext;
         _currentUser = currentUser;
         _dateTime = dateTime;
@@ -61,6 +65,9 @@ public sealed class StartConversationCommandHandler : IRequestHandler<StartConve
         var conversation = Conversation.Start(request.ListingId, buyerId, sellerUserId, _dateTime.UtcNow);
         _dbContext.Conversations.Add(conversation);
         await _dbContext.SaveChangesAsync(cancellationToken);
+
+        // Only a brand-new conversation counts - reopening an existing chat isn't a new lead.
+        await _engagementTracker.RecordAsync([(listing.Id, listing.SellerId)], ListingEngagement.MessageStart, cancellationToken);
 
         return Result.Success(ToResponse(conversation, buyerId));
     }

@@ -2,6 +2,7 @@ using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Ogasela.Application.Common.Interfaces;
 using Ogasela.Domain.Accounts;
+using Ogasela.Domain.Analytics;
 using Ogasela.Domain.AdIntegrations;
 using Ogasela.Domain.Geo;
 using Ogasela.Domain.Listings;
@@ -31,6 +32,26 @@ public class OgaselaDbContext : DbContext, IApplicationDbContext
     public DbSet<SellerProfile> SellerProfiles => Set<SellerProfile>();
 
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
+    public DbSet<ExternalLogin> ExternalLogins => Set<ExternalLogin>();
+
+    public DbSet<ListingDailyStat> ListingDailyStats => Set<ListingDailyStat>();
+
+    public DbSet<SellerDailyStat> SellerDailyStats => Set<SellerDailyStat>();
+
+    public DbSet<Announcement> Announcements => Set<Announcement>();
+
+    public DbSet<InboxNotification> InboxNotifications => Set<InboxNotification>();
+
+    public DbSet<UserDocument> UserDocuments => Set<UserDocument>();
+
+    public DbSet<ProfileChangeRequest> ProfileChangeRequests => Set<ProfileChangeRequest>();
+
+    public DbSet<Dispute> Disputes => Set<Dispute>();
+
+    public DbSet<Ogasela.Domain.Settings.PlatformSetting> PlatformSettings => Set<Ogasela.Domain.Settings.PlatformSetting>();
+
+    public DbSet<DisputeMessage> DisputeMessages => Set<DisputeMessage>();
 
     public DbSet<BiometricVerification> BiometricVerifications => Set<BiometricVerification>();
 

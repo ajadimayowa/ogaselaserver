@@ -25,9 +25,18 @@ namespace Ogasela.Infrastructure.Accounts;
 /// - If the configured email belongs to a *different* account than the configured phone, this
 ///   skips rather than guessing which of the two conflicting accounts should win.
 /// </summary>
+public enum SuperAdminSeedOutcome
+{
+    NotConfigured,
+    Created,
+    PromotedExistingAccount,
+    AlreadySuperAdmin,
+    EmailBelongsToAnotherAccount
+}
+
 public static class SuperAdminSeeder
 {
-    public static async Task SeedAsync(
+    public static async Task<SuperAdminSeedOutcome> SeedAsync(
         IApplicationDbContext dbContext, IPasswordHasher passwordHasher, IConfiguration configuration, CancellationToken cancellationToken)
     {
         var phone = configuration["SuperAdminSeed:Phone"];
@@ -37,7 +46,7 @@ public static class SuperAdminSeeder
 
         if (string.IsNullOrWhiteSpace(phone) || string.IsNullOrWhiteSpace(password))
         {
-            return;
+            return SuperAdminSeedOutcome.NotConfigured;
         }
 
         var existingByPhone = await dbContext.Users.FirstOrDefaultAsync(u => u.Phone == phone, cancellationToken);
@@ -46,12 +55,12 @@ public static class SuperAdminSeeder
         {
             if (existingByPhone.Role == UserRole.SuperAdmin)
             {
-                return;
+                return SuperAdminSeedOutcome.AlreadySuperAdmin;
             }
 
             existingByPhone.PromoteToSuperAdmin(name, email, passwordHasher.Hash(password));
             await dbContext.SaveChangesAsync(cancellationToken);
-            return;
+            return SuperAdminSeedOutcome.PromotedExistingAccount;
         }
 
         var existingByEmail = !string.IsNullOrWhiteSpace(email)
@@ -60,11 +69,12 @@ public static class SuperAdminSeeder
 
         if (existingByEmail is not null)
         {
-            return;
+            return SuperAdminSeedOutcome.EmailBelongsToAnotherAccount;
         }
 
         var user = User.Create(phone, email, passwordHasher.Hash(password), UserRole.SuperAdmin, name);
         dbContext.Users.Add(user);
         await dbContext.SaveChangesAsync(cancellationToken);
+        return SuperAdminSeedOutcome.Created;
     }
 }

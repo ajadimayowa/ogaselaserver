@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <UserSecretsId>f1e4f6dd-d9cd-457f-9086-f69272a776e8</UserSecretsId>
     <!-- Lets Microsoft.AspNetCore.OpenApi pick up controller/action XML doc comments into the
          generated OpenAPI document. Only this project opts in (Directory.Build.props leaves it
          off for everything else) - Domain/Application/Infrastructure types aren't a public API

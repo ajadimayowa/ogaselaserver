@@ -40,7 +40,7 @@ public class AdCampaignLifecycleTests : IClassFixture<AdIntegrationsApiFactory>
             $"/api/v1/integrations/facebook/callback?code=fake-auth-code&state={sellerProfileId}");
         callbackResponse.StatusCode.Should().Be(HttpStatusCode.OK, "the OAuth callback carries no bearer token, so it must succeed unauthenticated");
 
-        var listing = await CreateDraftListingAsync(client, CategorySeedData.ElectronicsId, PromotionPlanSeedData.StandardId);
+        var listing = await CreateDraftListingAsync(client, CategorySeedData.PhonesAndTabletsId, PromotionPlanSeedData.StandardId);
 
         var promoteRequest = new PromoteListingRequest(500_000m, 14, "Lagos, 18-35", "Great deal!", "Grab it before it's gone.");
         var promoteResponse = await client.PostAsJsonAsync($"/api/v1/listings/{listing.Id}/promote/facebook", promoteRequest);
@@ -88,7 +88,7 @@ public class AdCampaignLifecycleTests : IClassFixture<AdIntegrationsApiFactory>
             $"/api/v1/integrations/tiktok/callback?code=fake-code&state={sellerProfileId}");
         callbackResponse.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var listing = await CreateDraftListingAsync(client, CategorySeedData.ElectronicsId, PromotionPlanSeedData.StandardId);
+        var listing = await CreateDraftListingAsync(client, CategorySeedData.PhonesAndTabletsId, PromotionPlanSeedData.StandardId);
         var promoteRequest = new PromoteListingRequest(200_000m, 7, null, "Title", "Description");
 
         var promoteResponse = await client.PostAsJsonAsync($"/api/v1/listings/{listing.Id}/promote/tiktok", promoteRequest);
@@ -100,7 +100,7 @@ public class AdCampaignLifecycleTests : IClassFixture<AdIntegrationsApiFactory>
         var pauseAfterRevoke = await client.PostAsync($"/api/v1/listings/{listing.Id}/promote/tiktok/pause", content: null);
         pauseAfterRevoke.StatusCode.Should().Be(HttpStatusCode.Conflict, "a revoked connection must block further actions on an existing campaign");
 
-        var anotherListing = await CreateDraftListingAsync(client, CategorySeedData.ElectronicsId, PromotionPlanSeedData.StandardId);
+        var anotherListing = await CreateDraftListingAsync(client, CategorySeedData.PhonesAndTabletsId, PromotionPlanSeedData.StandardId);
         var promoteAfterRevoke = await client.PostAsJsonAsync($"/api/v1/listings/{anotherListing.Id}/promote/tiktok", promoteRequest);
         promoteAfterRevoke.StatusCode.Should().Be(HttpStatusCode.Conflict, "a revoked connection must also block promoting a new listing");
     }

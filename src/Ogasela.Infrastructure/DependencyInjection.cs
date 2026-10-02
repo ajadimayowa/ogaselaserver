@@ -1,3 +1,5 @@
+using Ogasela.Application.Analytics;
+using Ogasela.Infrastructure.Analytics;
 using Amazon;
 using Amazon.Rekognition;
 using Amazon.Runtime;
@@ -72,17 +74,29 @@ public static class DependencyInjection
         services.AddScoped<IPasswordHasher, PasswordHasher>();
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddScoped<IOtpStore, RedisOtpStore>();
+        services.AddScoped<IEngagementTracker, EngagementTracker>();
+
+        services.Configure<SocialAuthSettings>(configuration.GetSection(SocialAuthSettings.SectionName));
+        services.AddHttpClient<ISocialTokenVerifier, SocialTokenVerifier>(client => client.Timeout = TimeSpan.FromSeconds(10));
 
         services.Configure<TermiiSettings>(configuration.GetSection(TermiiSettings.SectionName));
-        services.AddHttpClient<ISmsSender, TermiiSmsSender>((sp, client) =>
+        // The real providers are only used by NotificationDeliveryWorker; handlers get the queued
+        // ISmsSender/IEmailSender so a slow provider never holds up a request (see NotificationQueue).
+        services.AddHttpClient<TermiiSmsSender>((sp, client) =>
         {
             var baseUrl = configuration[$"{TermiiSettings.SectionName}:BaseUrl"]
                 ?? throw new InvalidOperationException("Termii:BaseUrl was not found in configuration.");
             client.BaseAddress = new Uri(baseUrl);
+            client.Timeout = TimeSpan.FromSeconds(30);
         });
 
         services.Configure<EmailSettings>(configuration.GetSection(EmailSettings.SectionName));
-        services.AddScoped<IEmailSender, SmtpEmailSender>();
+        services.AddScoped<SmtpEmailSender>();
+
+        services.AddSingleton<NotificationQueue>();
+        services.AddSingleton<ISmsSender, QueuedSmsSender>();
+        services.AddSingleton<IEmailSender, QueuedEmailSender>();
+        services.AddHostedService<NotificationDeliveryWorker>();
 
         services.Configure<TurnstileSettings>(configuration.GetSection(TurnstileSettings.SectionName));
         services.AddHttpClient<ITurnstileVerifier, CloudflareTurnstileVerifier>((sp, client) =>
@@ -95,6 +109,10 @@ public static class DependencyInjection
         AddVerification(services, configuration, connectionString);
 
         services.AddScoped<ICategoryImageStorage, S3CategoryImageStorage>();
+        services.AddScoped<IAnnouncementImageStorage, S3AnnouncementImageStorage>();
+        services.AddScoped<IProfilePhotoStorage, S3ProfilePhotoStorage>();
+        services.AddScoped<IUserDocumentStorage, S3UserDocumentStorage>();
+        services.AddScoped<IDisputeEvidenceStorage, S3DisputeEvidenceStorage>();
 
         services.AddScoped<IPaymentAuthorizer, WalletPaymentAuthorizer>();
         services.AddScoped<ListingExpiryJob>();

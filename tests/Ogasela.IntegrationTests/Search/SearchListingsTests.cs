@@ -30,9 +30,9 @@ public class SearchListingsTests : IClassFixture<SearchApiFactory>
         const string description = "A rare vintage camera in excellent working condition, fully tested and serviced.";
 
         var freeListing = await CreateAndPublishAsync(
-            client, CategorySeedData.ElectronicsId, PromotionPlanSeedData.FreeId, title, description);
+            client, CategorySeedData.PhonesAndTabletsId, PromotionPlanSeedData.FreeId, title, description);
         var premiumListing = await CreateAndPublishAsync(
-            client, CategorySeedData.ElectronicsId, PromotionPlanSeedData.PremiumId, title, description);
+            client, CategorySeedData.PhonesAndTabletsId, PromotionPlanSeedData.PremiumId, title, description);
 
         var page = await SearchAsync(new Dictionary<string, string?> { ["query"] = token });
 
@@ -58,16 +58,16 @@ public class SearchListingsTests : IClassFixture<SearchApiFactory>
         const string token = "FilterMarkerQ7";
 
         var cheapElectronics = await CreateAndPublishAsync(
-            client, CategorySeedData.ElectronicsId, PromotionPlanSeedData.BasicId,
+            client, CategorySeedData.PhonesAndTabletsId, PromotionPlanSeedData.BasicId,
             $"{token} Cheap Phone", "An affordable phone.", price: 10_000m);
         var midElectronics = await CreateAndPublishAsync(
-            client, CategorySeedData.ElectronicsId, PromotionPlanSeedData.BasicId,
+            client, CategorySeedData.PhonesAndTabletsId, PromotionPlanSeedData.BasicId,
             $"{token} Mid Range Phone", "A mid-range phone.", price: 50_000m);
         var expensiveElectronics = await CreateAndPublishAsync(
-            client, CategorySeedData.ElectronicsId, PromotionPlanSeedData.BasicId,
+            client, CategorySeedData.PhonesAndTabletsId, PromotionPlanSeedData.BasicId,
             $"{token} Flagship Phone", "A flagship phone.", price: 500_000m);
         var outOfCategory = await CreateAndPublishAsync(
-            client, CategorySeedData.FashionId, PromotionPlanSeedData.BasicId,
+            client, CategorySeedData.WomensClothingId, PromotionPlanSeedData.BasicId,
             $"{token} Designer Jacket", "A designer jacket.", price: 50_000m);
 
         var page = await SearchAsync(new Dictionary<string, string?>
@@ -86,6 +86,32 @@ public class SearchListingsTests : IClassFixture<SearchApiFactory>
     }
 
     [Fact]
+    public async Task Search_WithAPartiallyTypedWord_MatchesByPrefix()
+    {
+        var client = await RegisterAndVerifySellerAsync(_factory);
+        var listing = await CreateAndPublishAsync(
+            client, CategorySeedData.PhonesAndTabletsId, PromotionPlanSeedData.BasicId,
+            "Quixotronic Handset", "A brand new handset in its box.");
+
+        var page = await SearchAsync(new Dictionary<string, string?> { ["query"] = "quixotro" });
+
+        page.Items.Select(i => i.Id).Should().Contain(listing.Id);
+    }
+
+    [Fact]
+    public async Task Search_ByParentCategoryName_FindsListingsInItsSubcategories()
+    {
+        var client = await RegisterAndVerifySellerAsync(_factory);
+        var listing = await CreateAndPublishAsync(
+            client, CategorySeedData.PhonesAndTabletsId, PromotionPlanSeedData.BasicId,
+            "Vexillary Handset", "Barely used.");
+
+        var page = await SearchAsync(new Dictionary<string, string?> { ["query"] = "vexillary electronics" });
+
+        page.Items.Select(i => i.Id).Should().Contain(listing.Id);
+    }
+
+    [Fact]
     public async Task Search_AcrossMultiplePages_ReturnsStableNonDuplicatedResults()
     {
         var client = await RegisterAndVerifySellerAsync(_factory);
@@ -97,7 +123,7 @@ public class SearchListingsTests : IClassFixture<SearchApiFactory>
         for (var i = 1; i <= totalListings; i++)
         {
             var listing = await CreateAndPublishAsync(
-                client, CategorySeedData.ElectronicsId, PromotionPlanSeedData.BasicId,
+                client, CategorySeedData.PhonesAndTabletsId, PromotionPlanSeedData.BasicId,
                 $"{token} Item {i:D2}", "A paginated test listing.");
             createdIds.Add(listing.Id);
         }

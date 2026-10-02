@@ -34,7 +34,17 @@ public sealed class ImageSharpListingImageProcessor : IListingImageProcessor
         var originalSizeBytes = originalBuffer.Length;
         originalBuffer.Position = 0;
 
-        using var image = await Image.LoadAsync(originalBuffer, cancellationToken);
+        Image image;
+        try
+        {
+            image = await Image.LoadAsync(originalBuffer, cancellationToken);
+        }
+        catch (Exception ex) when (ex is UnknownImageFormatException or InvalidImageContentException)
+        {
+            throw new UnsupportedListingImageException(ex);
+        }
+
+        using var _ = image;
 
         var fontSize = Math.Max(14f, image.Width / 28f);
         var font = WatermarkFontFamily.CreateFont(fontSize, FontStyle.Bold);

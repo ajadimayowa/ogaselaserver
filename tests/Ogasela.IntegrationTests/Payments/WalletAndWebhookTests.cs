@@ -82,7 +82,7 @@ public class WalletAndWebhookTests : IClassFixture<PaymentsApiFactory>
         const decimal basicPlanPriceKobo = 75_000m;
         await FundAndConfirmAsync(client, basicPlanPriceKobo);
 
-        var firstListing = await CreateDraftListingAsync(client, CategorySeedData.ElectronicsId, PromotionPlanSeedData.BasicId);
+        var firstListing = await CreateDraftListingAsync(client, CategorySeedData.PhonesAndTabletsId, PromotionPlanSeedData.BasicId);
         var firstPublish = await PublishAsync(client, firstListing.Id);
         firstPublish.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -98,7 +98,7 @@ public class WalletAndWebhookTests : IClassFixture<PaymentsApiFactory>
 
         // A second paid listing with no remaining balance must fail cleanly: no partial debit,
         // the listing stays a Draft.
-        var secondListing = await CreateDraftListingAsync(client, CategorySeedData.ElectronicsId, PromotionPlanSeedData.BasicId);
+        var secondListing = await CreateDraftListingAsync(client, CategorySeedData.PhonesAndTabletsId, PromotionPlanSeedData.BasicId);
         var secondPublish = await PublishAsync(client, secondListing.Id);
         secondPublish.StatusCode.Should().Be(HttpStatusCode.PaymentRequired);
 

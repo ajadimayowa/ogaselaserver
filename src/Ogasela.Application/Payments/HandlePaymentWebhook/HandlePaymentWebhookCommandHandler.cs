@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Ogasela.Application.Common.Interfaces;
+using Ogasela.Application.Listings.Checkout;
 using Ogasela.Domain.Payments;
 using Ogasela.Shared;
 
@@ -20,11 +21,13 @@ public sealed class HandlePaymentWebhookCommandHandler : IRequestHandler<HandleP
     private readonly IDateTime _dateTime;
     private readonly IPaymentGatewayResolver _gatewayResolver;
     private readonly ILogger<HandlePaymentWebhookCommandHandler> _logger;
+    private readonly ListingPaymentSettlement _listingSettlement;
 
     public HandlePaymentWebhookCommandHandler(
         IApplicationDbContext dbContext, IDateTime dateTime, IPaymentGatewayResolver gatewayResolver,
-        ILogger<HandlePaymentWebhookCommandHandler> logger)
+        ILogger<HandlePaymentWebhookCommandHandler> logger, ListingPaymentSettlement listingSettlement)
     {
+        _listingSettlement = listingSettlement;
         _dbContext = dbContext;
         _dateTime = dateTime;
         _gatewayResolver = gatewayResolver;
@@ -73,6 +76,13 @@ public sealed class HandlePaymentWebhookCommandHandler : IRequestHandler<HandleP
         if (verifyResult.IsFailure)
         {
             return Result.Failure(PaymentErrors.GatewayError);
+        }
+
+        // A card payment for a listing's plan: settle it (submits the listing) instead of crediting the wallet.
+        if (transaction.Type == TransactionType.PlanPurchase && transaction.RelatedListingId is not null)
+        {
+            await _listingSettlement.SettleAsync(transaction, verifyResult.Value, cancellationToken);
+            return Result.Success();
         }
 
         if (!verifyResult.Value.Successful)

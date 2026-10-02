@@ -9,7 +9,8 @@ public sealed class UpdateListingCommandValidator : AbstractValidator<UpdateList
     {
         RuleFor(x => x.ListingId).NotEmpty();
         RuleFor(x => x.Title).NotEmpty().MaximumLength(150);
-        RuleFor(x => x.Description).NotEmpty().MaximumLength(5000);
+        // May be empty while it's a draft - completeness is enforced at checkout (ListingPublishService).
+        RuleFor(x => x.Description).MaximumLength(5000);
         RuleFor(x => x.CategoryId).NotEmpty();
 
         When(x => x.Price is not null, () =>

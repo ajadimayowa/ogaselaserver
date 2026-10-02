@@ -32,13 +32,29 @@ public sealed class CategoryConfiguration : IEntityTypeConfiguration<Category>
             Seed(CategorySeedData.HomeAndFurnitureId, "Home & Furniture", isFreeEligible: true),
             Seed(CategorySeedData.JobsId, "Jobs", isFreeEligible: false),
             Seed(CategorySeedData.ServicesId, "Services", isFreeEligible: true));
+
+        // Subcategories inherit their parent's IsFreeEligible.
+        var parentFreeEligible = new Dictionary<Guid, bool>
+        {
+            [CategorySeedData.ElectronicsId] = true,
+            [CategorySeedData.FashionId] = true,
+            [CategorySeedData.VehiclesId] = false,
+            [CategorySeedData.RealEstateId] = false,
+            [CategorySeedData.HomeAndFurnitureId] = true,
+            [CategorySeedData.JobsId] = false,
+            [CategorySeedData.ServicesId] = true,
+        };
+
+        builder.HasData(CategorySeedData.Subcategories
+            .Select(sub => Seed(sub.Id, sub.Name, parentFreeEligible[sub.ParentId], sub.ParentId))
+            .ToArray());
     }
 
-    private static object Seed(Guid id, string name, bool isFreeEligible) => new
+    private static object Seed(Guid id, string name, bool isFreeEligible, Guid? parentCategoryId = null) => new
     {
         Id = id,
         Name = name,
-        ParentCategoryId = (Guid?)null,
+        ParentCategoryId = parentCategoryId,
         IsFreeEligible = isFreeEligible,
         AttributeSchemaVersion = 1,
         ImageS3Key = (string?)null,

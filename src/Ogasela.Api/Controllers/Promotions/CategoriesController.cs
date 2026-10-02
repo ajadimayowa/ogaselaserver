@@ -28,7 +28,12 @@ public sealed class CategoriesController : ControllerBase
         return result.ToActionResult(this);
     }
 
-    /// <summary>multipart/form-data; Image is optional. ParentCategoryId, if set, must reference an existing category.</summary>
+    /// <summary>
+    /// multipart/form-data; Image is optional. A top-level category must be created with at least
+    /// one subcategory (repeat the "subcategories" field per name) - they're saved together. To add
+    /// one more subcategory to an existing category later, set ParentCategoryId to that top-level
+    /// category and leave subcategories empty.
+    /// </summary>
     [HttpPost("api/v1/admin/categories")]
     [Authorize(Policy = "SuperAdmin")]
     public async Task<IActionResult> CreateCategory([FromForm] CreateCategoryRequest request, CancellationToken cancellationToken)
@@ -42,7 +47,8 @@ public sealed class CategoriesController : ControllerBase
             request.AttributeSchemaVersion,
             imageStream,
             request.Image?.FileName,
-            request.Image?.ContentType);
+            request.Image?.ContentType,
+            request.Subcategories);
 
         var result = await _sender.Send(command, cancellationToken);
         return result.ToActionResult(this);

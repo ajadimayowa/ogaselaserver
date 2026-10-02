@@ -13,6 +13,7 @@ using Ogasela.Api.Middleware;
 using Ogasela.Api.OpenApi;
 using Ogasela.Api.RateLimiting;
 using Ogasela.Application;
+using Ogasela.Application.Accounts;
 using Ogasela.Application.Accounts.Interfaces;
 using Ogasela.Application.Common.Interfaces;
 using Ogasela.Domain.Accounts;
@@ -28,7 +29,18 @@ using Ogasela.Infrastructure.Reviews;
 using Ogasela.Infrastructure.Verification;
 using Serilog;
 
+// "seed-superadmin" runs the SuperAdminSeeder once from SuperAdminSeed:* config, prints what it
+// did, and exits without serving requests - see scripts/seed-superadmin.sh.
+var isSeedSuperAdminCommand = args.Length > 0 && args[0] == "seed-superadmin";
+if (isSeedSuperAdminCommand)
+{
+    args = args[1..];
+}
+
 var builder = WebApplication.CreateBuilder(args);
+
+// Credentials come from the repo-root .env (see DotEnvConfiguration) - not User Secrets.
+builder.Configuration.AddDotEnv(builder.Environment.ContentRootPath);
 
 builder.Host.UseSerilog((context, services, configuration) =>
 {
@@ -44,6 +56,13 @@ builder.Host.UseSerilog((context, services, configuration) =>
 });
 
 builder.Services.AddApplication(builder.Configuration);
+
+// The master OTP (Default_Global_OTP) is for development/testing only - never honoured in Production.
+var masterOtpConfigured = !string.IsNullOrWhiteSpace(builder.Configuration[$"{OtpSettings.SectionName}:MasterCode"]);
+if (builder.Environment.IsProduction())
+{
+    builder.Services.PostConfigure<OtpSettings>(o => o.MasterCode = null);
+}
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddOpenApi(options =>
@@ -157,15 +176,46 @@ builder.Services
 
 var app = builder.Build();
 
+if (masterOtpConfigured)
+{
+    if (app.Environment.IsProduction())
+    {
+        app.Logger.LogWarning("Default_Global_OTP is set but ignored: the master OTP is disabled in Production.");
+    }
+    else
+    {
+        app.Logger.LogWarning(
+            "Master OTP (Default_Global_OTP) is ENABLED in the {Environment} environment - every OTP check also accepts it.",
+            app.Environment.EnvironmentName);
+    }
+}
+
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<OgaselaDbContext>();
     await dbContext.Database.MigrateAsync();
 
     var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
-    await SuperAdminSeeder.SeedAsync(dbContext, passwordHasher, app.Configuration, CancellationToken.None);
+    var superAdminSeedOutcome = await SuperAdminSeeder.SeedAsync(dbContext, passwordHasher, app.Configuration, CancellationToken.None);
     await RbacSeeder.SeedAsync(dbContext, CancellationToken.None);
     await NigeriaGeoSeeder.SeedAsync(dbContext, CancellationToken.None);
+
+    if (isSeedSuperAdminCommand)
+    {
+        var email = app.Configuration["SuperAdminSeed:Email"];
+        var phone = app.Configuration["SuperAdminSeed:Phone"];
+        var (message, exitCode) = superAdminSeedOutcome switch
+        {
+            SuperAdminSeedOutcome.Created => ($"Created SuperAdmin {email} ({phone}).", 0),
+            SuperAdminSeedOutcome.PromotedExistingAccount => ($"Promoted the existing account with phone {phone} to SuperAdmin and set its email/password.", 0),
+            SuperAdminSeedOutcome.AlreadySuperAdmin => ($"A SuperAdmin with phone {phone} already exists - nothing changed. Use the control portal's \"Forgot password?\" if you need a new password.", 0),
+            SuperAdminSeedOutcome.EmailBelongsToAnotherAccount => ($"Email {email} already belongs to a different account than phone {phone} - nothing changed.", 1),
+            _ => ("SuperAdminSeed:Phone and SuperAdminSeed:Password must both be set - nothing changed.", 1)
+        };
+
+        Console.WriteLine(message);
+        return exitCode;
+    }
 }
 
 var recurringJobManager = app.Services.GetRequiredService<IRecurringJobManager>();
@@ -228,5 +278,6 @@ app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => fa
 app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
 
 app.Run();
+return 0;
 
 public partial class Program;

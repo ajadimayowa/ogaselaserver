@@ -7,6 +7,7 @@ using Ogasela.Application.Admin.EraseUserData;
 using Ogasela.Application.Admin.GetAuditLog;
 using Ogasela.Application.Admin.GetPlatformDashboard;
 using Ogasela.Application.Moderation.GetModerationQueue;
+using Ogasela.Application.Moderation.ListingReview;
 using Ogasela.Application.Moderation.ResolveReport;
 using Ogasela.Application.Verification.GetManualReviewQueue;
 
@@ -44,6 +45,33 @@ public sealed class AdminController : ControllerBase
     public async Task<IActionResult> ResolveReport(Guid reportId, ResolveReportRequest request, CancellationToken cancellationToken)
     {
         var result = await _sender.Send(new ResolveReportCommand(reportId, request.Decision, request.Notes), cancellationToken);
+        return result.ToActionResult(this);
+    }
+
+    /// <summary>Ads waiting for approval before they go live, oldest first, with any open fraud-risk score.</summary>
+    [HttpGet("listings/pending")]
+    [Authorize(Roles = "Moderator,SuperAdmin")]
+    public async Task<IActionResult> GetPendingListings(CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(new GetPendingListingsQuery(), cancellationToken);
+        return result.ToActionResult(this);
+    }
+
+    /// <summary>Approves a pending ad: it goes live now, and its plan duration starts now.</summary>
+    [HttpPost("listings/{id:guid}/approve")]
+    [Authorize(Roles = "Moderator,SuperAdmin")]
+    public async Task<IActionResult> ApproveListing(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(new ApproveListingCommand(id), cancellationToken);
+        return result.ToActionResult(this);
+    }
+
+    /// <summary>Rejects a pending ad back to Draft with a reason the seller sees; a paid plan charge is refunded to their wallet.</summary>
+    [HttpPost("listings/{id:guid}/reject")]
+    [Authorize(Roles = "Moderator,SuperAdmin")]
+    public async Task<IActionResult> RejectListing(Guid id, RejectListingRequest request, CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(new RejectListingCommand(id, request.Reason), cancellationToken);
         return result.ToActionResult(this);
     }
 

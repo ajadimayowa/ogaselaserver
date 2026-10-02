@@ -19,7 +19,8 @@ public sealed record ListingResponse(
     DateTime? PublishedAt,
     DateTime? ExpiresAt,
     DateTime CreatedAt,
-    DateTime UpdatedAt)
+    DateTime UpdatedAt,
+    string? ReviewNote = null)
 {
     public static ListingResponse From(Listing listing) => new(
         listing.Id,
@@ -38,5 +39,6 @@ public sealed record ListingResponse(
         listing.PublishedAt,
         listing.ExpiresAt,
         listing.CreatedAt,
-        listing.UpdatedAt);
+        listing.UpdatedAt,
+        listing.ReviewNote);
 }

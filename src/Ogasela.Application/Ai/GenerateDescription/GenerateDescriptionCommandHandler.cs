@@ -18,12 +18,14 @@ public sealed class GenerateDescriptionCommandHandler
 
     public async Task<Result<ListingCopySuggestion>> Handle(GenerateDescriptionCommand request, CancellationToken cancellationToken)
     {
-        var accessResult = await _accessGuard.RequireCapabilityAsync(
-            request.PromotionPlanId, AiCapability.DescriptionGeneration, cancellationToken);
-
-        if (accessResult.IsFailure)
+        // No plan yet = the ad-posting flow, where this tool is free; with a plan, its tier decides.
+        if (request.PromotionPlanId is { } planId)
         {
-            return Result.Failure<ListingCopySuggestion>(accessResult.Error);
+            var accessResult = await _accessGuard.RequireCapabilityAsync(planId, AiCapability.DescriptionGeneration, cancellationToken);
+            if (accessResult.IsFailure)
+            {
+                return Result.Failure<ListingCopySuggestion>(accessResult.Error);
+            }
         }
 
         return await _copyGenerator.GenerateDescriptionAsync(request.Keywords, request.ImageRef, cancellationToken);

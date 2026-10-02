@@ -27,7 +27,8 @@ public sealed class SmtpEmailSender : IEmailSender
         mimeMessage.Subject = message.Subject;
         mimeMessage.Body = new BodyBuilder { HtmlBody = message.HtmlBody }.ToMessageBody();
 
-        using var client = new SmtpClient();
+        // MailKit's default is 2 minutes per operation; fail sooner if the relay stalls.
+        using var client = new SmtpClient { Timeout = 60_000 };
 
         try
         {

@@ -17,12 +17,14 @@ public sealed class SuggestPriceCommandHandler : IRequestHandler<SuggestPriceCom
 
     public async Task<Result<PriceSuggestion>> Handle(SuggestPriceCommand request, CancellationToken cancellationToken)
     {
-        var accessResult = await _accessGuard.RequireCapabilityAsync(
-            request.PromotionPlanId, AiCapability.PriceSuggestion, cancellationToken);
-
-        if (accessResult.IsFailure)
+        // No plan yet = the ad-posting flow, where this tool is free; with a plan, its tier decides.
+        if (request.PromotionPlanId is { } planId)
         {
-            return Result.Failure<PriceSuggestion>(accessResult.Error);
+            var accessResult = await _accessGuard.RequireCapabilityAsync(planId, AiCapability.PriceSuggestion, cancellationToken);
+            if (accessResult.IsFailure)
+            {
+                return Result.Failure<PriceSuggestion>(accessResult.Error);
+            }
         }
 
         return await _priceSuggestionService.SuggestPriceRangeAsync(

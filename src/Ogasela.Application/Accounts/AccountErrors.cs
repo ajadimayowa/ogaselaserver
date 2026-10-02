@@ -39,4 +39,23 @@ public static class AccountErrors
 
     public static readonly Error CurrentPasswordIncorrect = new(
         "User.CurrentPasswordIncorrect", "The current password is incorrect.");
+
+    public static readonly Error SocialProviderNotConfigured = new(
+        "SocialLogin.ProviderNotConfigured", "This sign-in option isn't available yet.");
+
+    public static readonly Error SocialTokenInvalid = new(
+        "SocialLogin.InvalidToken", "We couldn't confirm your sign-in with that provider. Please try again.");
+
+    public static readonly Error SocialLoginNotAllowed = new(
+        "SocialLogin.NotAllowed", "This account can't sign in with a social provider.");
+
+    public static readonly Error SocialEmailBelongsToAnotherAccount = new(
+        "SocialLogin.EmailInUse", "An account with this email already exists. Log in with your password instead.");
+
+    public static Error ProfilePhotoRejected(string? reason) => new(
+        "User.ProfilePhotoRejected",
+        $"That photo can't be used{(string.IsNullOrWhiteSpace(reason) ? "" : $" ({reason.ToLowerInvariant()})")}. Face the camera in good light and try again.");
+
+    public static readonly Error AccountSuspended = new(
+        "User.Suspended", "This account has been suspended. Contact support@ogasela.com if you think this is a mistake.");
 }

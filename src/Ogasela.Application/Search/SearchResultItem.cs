@@ -18,7 +18,7 @@ public sealed record SearchResultItem(
     DateTime? PublishedAt,
     DateTime CreatedAt,
     /// <summary>The plan this listing published under - the frontend renders its own "Featured"/"Premium" tag from this.</summary>
-    PromotionPlanName PlanTier,
+    string PlanTier,
     /// <summary>Distance in kilometres from the search's lat/long, or null when no coordinates were supplied on either side.</summary>
     double? DistanceKm,
     decimal Score);

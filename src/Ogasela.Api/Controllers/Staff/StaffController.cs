@@ -7,6 +7,7 @@ using Ogasela.Application.Staff.ApproveStaffOnboarding;
 using Ogasela.Application.Staff.CreateStaff;
 using Ogasela.Application.Staff.GetStaffDetail;
 using Ogasela.Application.Staff.GetStaffList;
+using Ogasela.Application.Staff.GetSuperAdmins;
 using Ogasela.Application.Staff.RejectStaffOnboarding;
 using Ogasela.Application.Staff.UploadStaffKycDocument;
 using Ogasela.Domain.Staff;
@@ -46,6 +47,15 @@ public sealed class StaffController : ControllerBase
     public async Task<IActionResult> GetStaffList([FromQuery] StaffOnboardingStatus? status, CancellationToken cancellationToken)
     {
         var result = await _sender.Send(new GetStaffListQuery(status), cancellationToken);
+        return result.ToActionResult(this);
+    }
+
+    /// <summary>Every SuperAdmin account, newest first. They're seeded (SuperAdminSeeder), not onboarded, so they're absent from the list above.</summary>
+    [HttpGet("super-admins")]
+    [Authorize(Policy = "perm:staff.view")]
+    public async Task<IActionResult> GetSuperAdmins(CancellationToken cancellationToken)
+    {
+        var result = await _sender.Send(new GetSuperAdminsQuery(), cancellationToken);
         return result.ToActionResult(this);
     }
 

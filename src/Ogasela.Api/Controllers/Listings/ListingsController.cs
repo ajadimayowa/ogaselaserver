@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Ogasela.Api.Common;
 using Ogasela.Api.Contracts.Listings;
+using Ogasela.Application.Listings.Checkout;
 using Ogasela.Application.Listings.CreateDraftListing;
+using Ogasela.Application.Listings.GetHotPicks;
 using Ogasela.Application.Listings.GetListing;
 using Ogasela.Application.Listings.GetSellerListings;
 using Ogasela.Application.Listings.MarkSoldListing;
@@ -56,6 +58,23 @@ public sealed class ListingsController : ControllerBase
         return result.ToActionResult(this);
     }
 
+    /// <summary>
+    /// Pays for a Draft listing's plan and submits it for review. Every rule but payment is checked
+    /// first. Free/Wallet settle now (Outcome Submitted). Card returns PaymentRequired with a
+    /// RedirectUrl to the gateway; the listing stays a Draft until confirm (or the webhook) settles it.
+    /// </summary>
+    [HttpPost("api/v1/listings/{id:guid}/checkout")]
+    [Authorize]
+    public async Task<IActionResult> Checkout(Guid id, ListingCheckoutRequest request, CancellationToken cancellationToken) =>
+        (await _sender.Send(new StartListingCheckoutCommand(id, request.PromotionPlanId, request.PaymentMethod), cancellationToken))
+            .ToActionResult(this);
+
+    /// <summary>Call on returning from the gateway: verifies the card payment and, once paid, submits the listing. Safe to repeat.</summary>
+    [HttpPost("api/v1/listings/{id:guid}/checkout/{reference}/confirm")]
+    [Authorize]
+    public async Task<IActionResult> ConfirmCheckout(Guid id, string reference, CancellationToken cancellationToken) =>
+        (await _sender.Send(new ConfirmListingPaymentCommand(id, reference), cancellationToken)).ToActionResult(this);
+
     /// <summary>Replaces a listing's editable fields. Only allowed while the listing is a Draft or Active.</summary>
     [HttpPut("api/v1/listings/{id:guid}")]
     [Authorize]
@@ -80,6 +99,23 @@ public sealed class ListingsController : ControllerBase
     public async Task<IActionResult> Publish(Guid id, CancellationToken cancellationToken)
     {
         var result = await _sender.Send(new PublishListingCommand(id), cancellationToken);
+        return result.ToActionResult(this);
+    }
+
+    /// <summary>
+    /// Public - the home screen's Hot Picks: up to 50 live ads buyers are engaging with most, mixed
+    /// across categories, paged. categoryId narrows it to one category (a top-level one includes its
+    /// subcategories). location narrows it to ads from that place (e.g. the city the user picked).
+    /// Pass the same seed on every page of one visit; a new seed reshuffles the mix.
+    /// </summary>
+    [HttpGet("api/v1/listings/hot")]
+    public async Task<IActionResult> GetHotPicks(
+        [FromQuery] Guid? categoryId, [FromQuery] int page, [FromQuery] int pageSize, [FromQuery] int seed,
+        [FromQuery] string? location, CancellationToken cancellationToken)
+    {
+        var query = new GetHotPicksQuery(
+            categoryId, page <= 0 ? 1 : page, pageSize <= 0 ? 10 : Math.Min(pageSize, 50), seed, location);
+        var result = await _sender.Send(query, cancellationToken);
         return result.ToActionResult(this);
     }
 

@@ -39,11 +39,14 @@ public static class DependencyInjection
 
         services.Configure<ListingSettings>(configuration.GetSection(ListingSettings.SectionName));
         services.AddScoped<ListingPublishService>();
+        services.AddScoped<Listings.Checkout.ListingPaymentSettlement>();
+        services.AddScoped<Settings.IPlatformSettings, Settings.PlatformSettingsService>();
 
         services.Configure<PaymentSettings>(configuration.GetSection(PaymentSettings.SectionName));
         services.AddScoped<IPaymentGatewayResolver, PaymentGatewayResolver>();
 
         services.Configure<AiSettings>(configuration.GetSection(AiSettings.SectionName));
+        services.Configure<OtpSettings>(configuration.GetSection(OtpSettings.SectionName));
         services.AddScoped<AiAccessGuard>();
 
         return services;

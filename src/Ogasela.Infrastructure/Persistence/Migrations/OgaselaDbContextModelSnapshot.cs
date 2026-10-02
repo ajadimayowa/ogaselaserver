@@ -23,6 +23,92 @@ namespace Ogasela.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Ogasela.Domain.Accounts.ExternalLogin", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("ProviderUserId")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Provider", "ProviderUserId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "Provider")
+                        .IsUnique();
+
+                    b.ToTable("ExternalLogins", (string)null);
+                });
+
+            modelBuilder.Entity("Ogasela.Domain.Accounts.ProfileChangeRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BusinessName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NewValue")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("ReviewNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ReviewedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("StoreAddress")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status", "CreatedAt");
+
+                    b.HasIndex("UserId", "Type", "Status");
+
+                    b.ToTable("ProfileChangeRequests", (string)null);
+                });
+
             modelBuilder.Entity("Ogasela.Domain.Accounts.RefreshToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -78,6 +164,10 @@ namespace Ogasela.Infrastructure.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<string>("StoreAddress")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
@@ -125,6 +215,10 @@ namespace Ogasela.Infrastructure.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<string>("ProfilePhotoS3Key")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<string>("PushToken")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
@@ -133,6 +227,13 @@ namespace Ogasela.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
+
+                    b.Property<DateTime?>("SuspendedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SuspensionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.HasKey("Id");
 
@@ -145,6 +246,65 @@ namespace Ogasela.Infrastructure.Persistence.Migrations
                         .HasFilter("\"Phone\" IS NOT NULL");
 
                     b.ToTable("Users", (string)null);
+                });
+
+            modelBuilder.Entity("Ogasela.Domain.Accounts.UserDocument", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("FileS3Key")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("IdNumber")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("IdType")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("ReviewNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Type", "CreatedAt");
+
+                    b.ToTable("UserDocuments", (string)null);
                 });
 
             modelBuilder.Entity("Ogasela.Domain.AdIntegrations.AdAccountConnection", b =>
@@ -233,6 +393,55 @@ namespace Ogasela.Infrastructure.Persistence.Migrations
                     b.HasIndex("ListingId", "Platform", "CreatedAt");
 
                     b.ToTable("AdCampaigns", (string)null);
+                });
+
+            modelBuilder.Entity("Ogasela.Domain.Analytics.ListingDailyStat", b =>
+                {
+                    b.Property<Guid>("ListingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<long>("CallClicks")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("Impressions")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("MessageStarts")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("Saves")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("SellerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Views")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("ListingId", "Date");
+
+                    b.HasIndex("SellerId", "Date");
+
+                    b.ToTable("ListingDailyStats", (string)null);
+                });
+
+            modelBuilder.Entity("Ogasela.Domain.Analytics.SellerDailyStat", b =>
+                {
+                    b.Property<Guid>("SellerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<long>("ProfileVisits")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("SellerId", "Date");
+
+                    b.ToTable("SellerDailyStats", (string)null);
                 });
 
             modelBuilder.Entity("Ogasela.Domain.Geo.NigeriaCity", b =>
@@ -343,6 +552,10 @@ namespace Ogasela.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("PublishedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("ReviewNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
                     b.Property<Guid>("SellerId")
                         .HasColumnType("uuid");
 
@@ -401,6 +614,51 @@ namespace Ogasela.Infrastructure.Persistence.Migrations
                     b.HasIndex("CreatedAt");
 
                     b.ToTable("AccountDeletionRequests", (string)null);
+                });
+
+            modelBuilder.Entity("Ogasela.Domain.Marketing.Announcement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Caption")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CtaLabel")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("CtaUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ImageS3Key")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsActive", "CreatedAt");
+
+                    b.ToTable("Announcements", (string)null);
                 });
 
             modelBuilder.Entity("Ogasela.Domain.Marketing.ContactFormSubmission", b =>
@@ -556,6 +814,118 @@ namespace Ogasela.Infrastructure.Persistence.Migrations
                     b.ToTable("Messages", (string)null);
                 });
 
+            modelBuilder.Entity("Ogasela.Domain.Moderation.Dispute", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AgainstUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AssignedToUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ConversationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.PrimitiveCollection<List<string>>("EvidenceKeys")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.Property<Guid>("ListingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Outcome")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<Guid>("RaisedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("ResolutionNote")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AgainstUserId");
+
+                    b.HasIndex("RaisedByUserId");
+
+                    b.HasIndex("Reference")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "CreatedAt");
+
+                    b.ToTable("Disputes", (string)null);
+                });
+
+            modelBuilder.Entity("Ogasela.Domain.Moderation.DisputeMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AttachmentKey")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("AuthorRole")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("AuthorUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DisputeId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DisputeId", "CreatedAt");
+
+                    b.ToTable("DisputeMessages", (string)null);
+                });
+
             modelBuilder.Entity("Ogasela.Domain.Moderation.Report", b =>
                 {
                     b.Property<Guid>("Id")
@@ -597,6 +967,60 @@ namespace Ogasela.Infrastructure.Persistence.Migrations
                     b.HasIndex("TargetType", "TargetId");
 
                     b.ToTable("Reports", (string)null);
+                });
+
+            modelBuilder.Entity("Ogasela.Domain.Notifications.InboxNotification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid?>("ConversationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Count")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DisputeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ListingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "ReadAt");
+
+                    b.HasIndex("UserId", "UpdatedAt");
+
+                    b.ToTable("InboxNotifications", (string)null);
                 });
 
             modelBuilder.Entity("Ogasela.Domain.Notifications.Notification", b =>
@@ -845,6 +1269,316 @@ namespace Ogasela.Infrastructure.Persistence.Migrations
                             IsFreeEligible = true,
                             Name = "Services",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000001001"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = true,
+                            Name = "Phones & Tablets",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000001"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000001002"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = true,
+                            Name = "Laptops & Computers",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000001"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000001003"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = true,
+                            Name = "TVs & Audio",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000001"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000001004"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = true,
+                            Name = "Gaming",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000001"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000001005"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = true,
+                            Name = "Cameras",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000001"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000001006"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = true,
+                            Name = "Accessories",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000001"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000002001"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = true,
+                            Name = "Women's Clothing",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000002"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000002002"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = true,
+                            Name = "Men's Clothing",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000002"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000002003"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = true,
+                            Name = "Shoes",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000002"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000002004"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = true,
+                            Name = "Bags",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000002"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000002005"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = true,
+                            Name = "Watches & Jewellery",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000002"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000003001"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = false,
+                            Name = "Cars",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000003"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000003002"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = false,
+                            Name = "Motorcycles",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000003"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000003003"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = false,
+                            Name = "Trucks & Buses",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000003"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000003004"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = false,
+                            Name = "Vehicle Parts",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000003"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000004001"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = false,
+                            Name = "Houses & Apartments for Rent",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000004"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000004002"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = false,
+                            Name = "Houses & Apartments for Sale",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000004"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000004003"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = false,
+                            Name = "Land & Plots",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000004"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000004004"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = false,
+                            Name = "Commercial Property",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000004"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000005001"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = true,
+                            Name = "Furniture",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000005"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000005002"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = true,
+                            Name = "Home Appliances",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000005"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000005003"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = true,
+                            Name = "Kitchen & Dining",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000005"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000005004"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = true,
+                            Name = "Bedding & Decor",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000005"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000006001"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = false,
+                            Name = "Full-time",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000006"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000006002"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = false,
+                            Name = "Part-time",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000006"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000006003"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = false,
+                            Name = "Internships",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000006"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000007001"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = true,
+                            Name = "Repairs",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000007"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000007002"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = true,
+                            Name = "Beauty & Wellness",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000007"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000007003"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = true,
+                            Name = "Cleaning",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000007"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000007004"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = true,
+                            Name = "Events & Catering",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000007"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
+                        },
+                        new
+                        {
+                            Id = new Guid("c17a0001-0000-0000-0000-000000007005"),
+                            AttributeSchemaVersion = 1,
+                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            IsFreeEligible = true,
+                            Name = "Tutoring & Lessons",
+                            ParentCategoryId = new Guid("c17a0000-0000-0000-0000-000000000007"),
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         });
                 });
 
@@ -868,16 +1602,25 @@ namespace Ogasela.Infrastructure.Persistence.Migrations
                     b.Property<int>("BundledAdCreditKobo")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Description")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
                     b.Property<int>("DurationDays")
                         .HasColumnType("integer");
+
+                    b.Property<string>("Features")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
 
                     b.Property<int>("PhotoLimit")
                         .HasColumnType("integer");
@@ -904,7 +1647,9 @@ namespace Ogasela.Infrastructure.Persistence.Migrations
                             AiToolTier = "Basic",
                             BoostWeight = 0,
                             BundledAdCreditKobo = 0,
+                            Description = "Get your ad in front of buyers at no cost.",
                             DurationDays = 7,
+                            Features = "Live for 7 days\nUp to 5 photos\nAI listing helper (basic)",
                             IsActive = true,
                             Name = "Free",
                             PhotoLimit = 5,
@@ -918,7 +1663,9 @@ namespace Ogasela.Infrastructure.Persistence.Migrations
                             AiToolTier = "Standard",
                             BoostWeight = 1,
                             BundledAdCreditKobo = 0,
+                            Description = "A longer run and a small boost in search.",
                             DurationDays = 15,
+                            Features = "Live for 15 days\nUp to 8 photos\nSmall boost in search results\nPromote on TikTok and Facebook\nAI listing helper (standard)",
                             IsActive = true,
                             Name = "Basic",
                             PhotoLimit = 8,
@@ -932,7 +1679,9 @@ namespace Ogasela.Infrastructure.Persistence.Migrations
                             AiToolTier = "Full",
                             BoostWeight = 2,
                             BundledAdCreditKobo = 0,
+                            Description = "More photos, video and a stronger boost.",
                             DurationDays = 21,
+                            Features = "Live for 21 days\nUp to 10 photos and a video\nStronger boost in search results\nPromote on TikTok and Facebook\nFull AI listing tools",
                             IsActive = true,
                             Name = "Standard",
                             PhotoLimit = 10,
@@ -946,7 +1695,9 @@ namespace Ogasela.Infrastructure.Persistence.Migrations
                             AiToolTier = "Full",
                             BoostWeight = 3,
                             BundledAdCreditKobo = 200000,
+                            Description = "Maximum visibility, with ad credit included.",
                             DurationDays = 30,
+                            Features = "Live for 30 days\nUp to 12 photos and a video\nTop boost in search results\nPromote on TikTok and Facebook\n₦2,000 ad credit included\nFull AI listing tools",
                             IsActive = true,
                             Name = "Premium",
                             PhotoLimit = 12,
@@ -1127,6 +1878,28 @@ namespace Ogasela.Infrastructure.Persistence.Migrations
                     b.HasKey("SellerId");
 
                     b.ToTable("TrustScores", (string)null);
+                });
+
+            modelBuilder.Entity("Ogasela.Domain.Settings.PlatformSetting", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("PlatformSettings", (string)null);
                 });
 
             modelBuilder.Entity("Ogasela.Domain.Shared.AuditLog", b =>

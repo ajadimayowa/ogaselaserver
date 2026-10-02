@@ -31,7 +31,15 @@ public static class RbacSeeder
         ("verification.decision.make", "Verification", "Decide manual review"),
         ("finance.dashboard.view", "Finance", "View platform dashboard"),
         ("audit.log.view", "Audit", "View audit log"),
-        ("dataprivacy.erase", "DataPrivacy", "Erase user data")
+        ("dataprivacy.erase", "DataPrivacy", "Erase user data"),
+        ("users.view", "Users", "View app users"),
+        ("users.manage", "Users", "Suspend, reactivate and sign out app users"),
+        ("users.documents.review", "Users", "Review user ID and address documents"),
+        ("users.changes.review", "Users", "Approve or reject phone, email and business info changes"),
+        ("listings.view", "Listings", "View all ads"),
+        ("listings.manage", "Listings", "Take down, reinstate and recategorise ads"),
+        ("disputes.view", "Disputes", "View buyer-seller disputes"),
+        ("disputes.manage", "Disputes", "Work and resolve disputes")
     ];
 
     public static async Task SeedAsync(IApplicationDbContext dbContext, CancellationToken cancellationToken)
@@ -53,7 +61,8 @@ public static class RbacSeeder
             "rbac.department.manage", "rbac.unit.manage", "rbac.role.manage",
             "staff.view", "staff.create", "staff.kyc.review", "staff.kyc.approve", "staff.kyc.reject",
             "geo.state.manage", "geo.city.manage",
-            "finance.dashboard.view", "audit.log.view", "moderation.queue.view", "verification.queue.view"
+            "finance.dashboard.view", "audit.log.view", "moderation.queue.view", "verification.queue.view",
+            "users.view", "listings.view", "disputes.view"
         };
         var hrKeys = new[]
         {

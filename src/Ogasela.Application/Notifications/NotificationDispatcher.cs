@@ -19,6 +19,7 @@ namespace Ogasela.Application.Notifications;
 public sealed class NotificationDispatcher :
     INotificationHandler<ListingExpiredEvent>,
     INotificationHandler<ListingExpiringSoonEvent>,
+    INotificationHandler<ListingReviewedEvent>,
     INotificationHandler<VerificationDecisionEvent>
 {
     private readonly IApplicationDbContext _dbContext;
@@ -46,6 +47,24 @@ public sealed class NotificationDispatcher :
 
         var payload = JsonSerializer.Serialize(new { notification.ListingId, notification.ExpiredAt });
         await DispatchAsync(userId.Value, NotificationTypes.ListingExpired, NotificationCategories.ListingLifecycle, payload, cancellationToken);
+    }
+
+    public async Task Handle(ListingReviewedEvent notification, CancellationToken cancellationToken)
+    {
+        var userId = await ResolveSellerUserIdAsync(notification.SellerId, cancellationToken);
+        if (userId is null)
+        {
+            return;
+        }
+
+        var payload = JsonSerializer.Serialize(new
+        {
+            notification.ListingId,
+            notification.Title,
+            notification.Approved,
+            notification.Reason
+        });
+        await DispatchAsync(userId.Value, NotificationTypes.ListingReviewed, NotificationCategories.ListingLifecycle, payload, cancellationToken);
     }
 
     public async Task Handle(ListingExpiringSoonEvent notification, CancellationToken cancellationToken)
@@ -86,6 +105,13 @@ public sealed class NotificationDispatcher :
     {
         foreach (var channel in _channels)
         {
+            // A SuperAdmin can switch a channel off for a whole category (Control Portal → Settings).
+            var platformKey = Settings.PlatformSettingKeys.NotificationChannel(category, channel.Channel);
+            if (await _dbContext.PlatformSettings.AnyAsync(s => s.Key == platformKey && s.Value == "false", cancellationToken))
+            {
+                continue;
+            }
+
             var preference = await _dbContext.NotificationPreferences.FirstOrDefaultAsync(
                 p => p.UserId == userId && p.Channel == channel.Channel && p.Category == category, cancellationToken);
 

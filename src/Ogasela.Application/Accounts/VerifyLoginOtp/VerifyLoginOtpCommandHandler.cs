@@ -47,6 +47,11 @@ public sealed class VerifyLoginOtpCommandHandler : IRequestHandler<VerifyLoginOt
             return Result.Failure<AuthTokenResponse>(errorResult);
         }
 
+        if (user.IsSuspended)
+        {
+            return Result.Failure<AuthTokenResponse>(AccountErrors.AccountSuspended);
+        }
+
         var response = await _tokenIssuer.IssueAsync(user, tokenToRotate: null, cancellationToken);
         return Result.Success(response);
     }

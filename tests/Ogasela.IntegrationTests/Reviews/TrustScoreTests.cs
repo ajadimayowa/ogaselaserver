@@ -25,7 +25,7 @@ public class TrustScoreTests : IClassFixture<ReviewsAndNotificationsApiFactory>
     public async Task RecomputeTrustScoresJob_ReflectsANewReviewsAverageRating()
     {
         var sellerClient = await RegisterAndVerifySellerAsync(_factory);
-        var listing = await CreateAndPublishFreeListingAsync(sellerClient, CategorySeedData.ElectronicsId);
+        var listing = await CreateAndPublishFreeListingAsync(sellerClient, CategorySeedData.PhonesAndTabletsId);
 
         var sellerProfileId = await GetSellerProfileIdAsync(sellerClient);
 

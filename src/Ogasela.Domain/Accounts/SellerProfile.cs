@@ -16,6 +16,9 @@ public class SellerProfile
 
     public string? Nin { get; private set; }
 
+    /// <summary>Where buyers can find the seller's shop, shown on listing detail. Optional - sellers without a physical shop leave it empty.</summary>
+    public string? StoreAddress { get; private set; }
+
     public VerificationStatus VerificationStatus { get; private set; }
 
     public DateTime? VerifiedAt { get; private set; }
@@ -42,6 +45,11 @@ public class SellerProfile
         BusinessName = businessName;
     }
 
+    public void UpdateStoreAddress(string? storeAddress)
+    {
+        StoreAddress = string.IsNullOrWhiteSpace(storeAddress) ? null : storeAddress.Trim();
+    }
+
     public void UpdateVerificationStatus(VerificationStatus status, DateTime? decidedAt)
     {
         VerificationStatus = status;
@@ -58,5 +66,6 @@ public class SellerProfile
         BusinessName = "Erased Seller";
         RcNumber = null;
         Nin = null;
+        StoreAddress = null;
     }
 }

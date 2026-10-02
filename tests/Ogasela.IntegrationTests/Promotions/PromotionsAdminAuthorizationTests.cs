@@ -61,7 +61,7 @@ public class PromotionsAdminAuthorizationTests : IClassFixture<PromotionsApiFact
     {
         var client = await CreateAuthenticatedClientAsync(UserRole.Moderator);
 
-        var request = new UpdatePromotionPlanRequest(7, 5, false, 0, 0m, AiToolTier.Basic, false, 0, true);
+        var request = new UpdatePromotionPlanRequest("Free", null, null, 7, 5, false, 0, 0m, AiToolTier.Basic, false, 0, true);
         var response = await client.PutAsJsonAsync($"/api/v1/admin/promotion-plans/{Guid.NewGuid()}", request);
 
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);

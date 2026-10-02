@@ -61,8 +61,9 @@ public sealed class UpdateListingCommandHandler : IRequestHandler<UpdateListingC
         }
 
         var now = _dateTime.UtcNow;
+        // A null plan keeps the one already chosen (e.g. at checkout) - an edit never silently drops it.
         listing.UpdateDetails(
-            request.CategoryId, request.PromotionPlanId, request.Title, request.Description, request.Price,
+            request.CategoryId, request.PromotionPlanId ?? listing.PromotionPlanId, request.Title, request.Description, request.Price,
             request.Condition, request.MediaUrls, now);
 
         listing.SetLocation(request.Location, request.Latitude, request.Longitude, now);

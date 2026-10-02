@@ -43,7 +43,16 @@ public sealed class UploadListingImageCommandHandler : IRequestHandler<UploadLis
             return Result.Failure<UploadListingImageResponse>(ListingErrors.SellerProfileNotFound);
         }
 
-        var processed = await _imageProcessor.ProcessAsync(request.Content, $"Ogasela • {businessName}", cancellationToken);
+        ProcessedListingImage processed;
+        try
+        {
+            processed = await _imageProcessor.ProcessAsync(request.Content, $"Ogasela • {businessName}", cancellationToken);
+        }
+        catch (UnsupportedListingImageException)
+        {
+            return Result.Failure<UploadListingImageResponse>(ListingErrors.UnsupportedImage);
+        }
+
         await using var _ = processed.Content;
 
         var fileName = $"{Path.GetFileNameWithoutExtension(request.FileName)}{processed.FileExtension}";

@@ -15,16 +15,18 @@ public sealed class SendMessageCommandHandler : IRequestHandler<SendMessageComma
     private readonly IDateTime _dateTime;
     private readonly IMessagePushNotifier _pushNotifier;
     private readonly ILogger<SendMessageCommandHandler> _logger;
+    private readonly IPublisher _publisher;
 
     public SendMessageCommandHandler(
         IApplicationDbContext dbContext, ICurrentUserService currentUser, IDateTime dateTime,
-        IMessagePushNotifier pushNotifier, ILogger<SendMessageCommandHandler> logger)
+        IMessagePushNotifier pushNotifier, ILogger<SendMessageCommandHandler> logger, IPublisher publisher)
     {
         _dbContext = dbContext;
         _currentUser = currentUser;
         _dateTime = dateTime;
         _pushNotifier = pushNotifier;
         _logger = logger;
+        _publisher = publisher;
     }
 
     public async Task<Result<MessageResponse>> Handle(SendMessageCommand request, CancellationToken cancellationToken)
@@ -74,6 +76,12 @@ public sealed class SendMessageCommandHandler : IRequestHandler<SendMessageComma
         {
             _logger.LogWarning(ex, "Failed to push new message {MessageId} to recipient {RecipientId}", message.Id, recipientId);
         }
+
+        await _publisher.Publish(
+            new NewMessageEvent(
+                conversation.Id, conversation.ListingId, recipientId, senderId,
+                string.IsNullOrWhiteSpace(request.Content) ? "Photo" : request.Content.Trim()),
+            cancellationToken);
 
         return Result.Success(response);
     }

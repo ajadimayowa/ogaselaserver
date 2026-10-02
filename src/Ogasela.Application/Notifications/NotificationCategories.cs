@@ -13,4 +13,5 @@ public static class NotificationTypes
     public const string ListingExpiringSoon = "ListingExpiringSoon";
     public const string ListingExpired = "ListingExpired";
     public const string VerificationDecision = "VerificationDecision";
+    public const string ListingReviewed = "ListingReviewed";
 }

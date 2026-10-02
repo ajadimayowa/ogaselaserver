@@ -1,4 +1,5 @@
 using System.Data;
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using NpgsqlTypes;
@@ -47,7 +48,11 @@ public sealed class PostgresListingSearchRepository : IListingSearchRepository
                 l."CreatedAt",
                 pp."Name" AS "PlanName",
                 pp."BoostWeight",
-                COALESCE(ts_rank(l."SearchVector", websearch_to_tsquery('english', @keyword)), 0)::numeric AS "TextRank",
+                GREATEST(
+                    COALESCE(ts_rank(l."SearchVector", websearch_to_tsquery('english', @keyword)), 0),
+                    CASE WHEN @prefixQuery IS NULL THEN 0
+                         ELSE COALESCE(ts_rank(l."SearchVector", to_tsquery('english', @prefixQuery)), 0) END
+                )::numeric AS "TextRank",
                 CASE
                     WHEN @latitude IS NOT NULL AND @longitude IS NOT NULL
                          AND l."Latitude" IS NOT NULL AND l."Longitude" IS NOT NULL
@@ -64,8 +69,11 @@ public sealed class PostgresListingSearchRepository : IListingSearchRepository
             WHERE l."Status" = 'Active'
                 AND (@keyword IS NULL
                      OR l."SearchVector" @@ websearch_to_tsquery('english', @keyword)
+                     OR (@prefixQuery IS NOT NULL AND l."SearchVector" @@ to_tsquery('english', @prefixQuery))
                      OR similarity(l."Title", @keyword) > 0.2)
-                AND (@categoryId IS NULL OR l."CategoryId" = @categoryId)
+                AND (@categoryId IS NULL
+                     OR l."CategoryId" = @categoryId
+                     OR l."CategoryId" IN (SELECT c."Id" FROM "Categories" c WHERE c."ParentCategoryId" = @categoryId))
                 AND (@minPrice IS NULL OR l."Price" >= @minPrice)
                 AND (@maxPrice IS NULL OR l."Price" <= @maxPrice)
                 AND (@condition IS NULL OR l."Condition" = @condition)
@@ -113,6 +121,7 @@ public sealed class PostgresListingSearchRepository : IListingSearchRepository
             command.CommandText = string.Format(SearchSql, BuildOrderByClause(query.SortBy));
 
             AddParameter(command, "keyword", NpgsqlDbType.Text, query.Keyword);
+            AddParameter(command, "prefixQuery", NpgsqlDbType.Text, BuildPrefixQuery(query.Keyword));
             AddParameter(command, "categoryId", NpgsqlDbType.Uuid, query.CategoryId);
             AddParameter(command, "minPrice", NpgsqlDbType.Numeric, query.MinPrice);
             AddParameter(command, "maxPrice", NpgsqlDbType.Numeric, query.MaxPrice);
@@ -147,7 +156,7 @@ public sealed class PostgresListingSearchRepository : IListingSearchRepository
                     GetNullable<decimal>(reader, "Longitude"),
                     GetNullable<DateTime>(reader, "PublishedAt"),
                     reader.GetDateTime(reader.GetOrdinal("CreatedAt")),
-                    Enum.Parse<PromotionPlanName>(reader.GetString(reader.GetOrdinal("PlanName"))),
+                    reader.GetString(reader.GetOrdinal("PlanName")),
                     GetNullable<double>(reader, "DistanceKm"),
                     reader.GetDecimal(reader.GetOrdinal("Score"))));
             }
@@ -173,6 +182,30 @@ public sealed class PostgresListingSearchRepository : IListingSearchRepository
         SearchSortOption.Distance => "\"DistanceKm\" ASC NULLS LAST, \"Id\"",
         _ => "\"Score\" DESC, \"Id\""
     };
+
+    /// <summary>
+    /// Search-as-you-type support: "sam t" becomes "sam:* &amp; t:*", so a partially typed word
+    /// still matches ("sam" finds "Samsung", "lapt" finds "laptop"). websearch_to_tsquery alone
+    /// only matches whole words. Each token is reduced to letters/digits first, so nothing typed
+    /// can inject tsquery operators; null when no token of 2+ characters is left.
+    /// </summary>
+    private static string? BuildPrefixQuery(string? keyword)
+    {
+        if (string.IsNullOrWhiteSpace(keyword))
+        {
+            return null;
+        }
+
+        var tokens = Regex.Split(keyword.ToLowerInvariant(), @"[^\p{L}\p{N}]+")
+            // A lone letter as a prefix ("c:*") matches nearly everything, so it's ignored here;
+            // whole-word matching via websearch_to_tsquery still sees it.
+            .Where(token => token.Length >= 2)
+            .Take(8)
+            .Select(token => $"{token}:*")
+            .ToList();
+
+        return tokens.Count == 0 ? null : string.Join(" & ", tokens);
+    }
 
     private static void AddParameter(NpgsqlCommand command, string name, NpgsqlDbType type, object? value)
     {

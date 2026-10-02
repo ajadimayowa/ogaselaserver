@@ -1,3 +1,4 @@
+using Ogasela.Application.Accounts.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Ogasela.Application.Common.Interfaces;
@@ -10,9 +11,12 @@ public sealed class GetCurrentUserQueryHandler : IRequestHandler<GetCurrentUserQ
 {
     private readonly IApplicationDbContext _dbContext;
     private readonly ICurrentUserService _currentUserService;
+    private readonly IProfilePhotoStorage _photoStorage;
 
-    public GetCurrentUserQueryHandler(IApplicationDbContext dbContext, ICurrentUserService currentUserService)
+    public GetCurrentUserQueryHandler(
+        IApplicationDbContext dbContext, ICurrentUserService currentUserService, IProfilePhotoStorage photoStorage)
     {
+        _photoStorage = photoStorage;
         _dbContext = dbContext;
         _currentUserService = currentUserService;
     }
@@ -45,7 +49,8 @@ public sealed class GetCurrentUserQueryHandler : IRequestHandler<GetCurrentUserQ
                     sellerProfile.RcNumber,
                     sellerProfile.Nin,
                     sellerProfile.VerificationStatus,
-                    sellerProfile.VerifiedAt);
+                    sellerProfile.VerifiedAt,
+                    sellerProfile.StoreAddress);
             }
         }
 
@@ -87,7 +92,8 @@ public sealed class GetCurrentUserQueryHandler : IRequestHandler<GetCurrentUserQ
             user.CreatedAt,
             user.MustChangePassword,
             sellerProfileResponse,
-            staffProfileResponse);
+            staffProfileResponse,
+            user.ProfilePhotoS3Key is null ? null : _photoStorage.GetImageUrl(user.ProfilePhotoS3Key));
 
         return Result.Success(response);
     }

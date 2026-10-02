@@ -1,0 +1,35 @@
+using FluentAssertions;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Ogasela.Application.Accounts;
+
+namespace Ogasela.IntegrationTests.Accounts;
+
+/// <summary>The master OTP (Default_Global_OTP) must never be honoured when the app runs as Production.</summary>
+public class MasterOtpEnvironmentTests : IClassFixture<AccountsApiFactory>
+{
+    private const string MasterCode = "246810";
+    private readonly AccountsApiFactory _factory;
+
+    public MasterOtpEnvironmentTests(AccountsApiFactory factory)
+    {
+        _factory = factory;
+    }
+
+    [Theory]
+    [InlineData("Production", null)]
+    [InlineData("Development", MasterCode)]
+    public void MasterCode_IsOnlyActiveOutsideProduction(string environment, string? expected)
+    {
+        using var app = _factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment(environment);
+            builder.UseSetting("Otp:MasterCode", MasterCode);
+        });
+
+        var settings = app.Services.GetRequiredService<IOptions<OtpSettings>>().Value;
+
+        settings.MasterCode.Should().Be(expected);
+    }
+}

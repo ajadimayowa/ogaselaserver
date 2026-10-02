@@ -4,7 +4,9 @@ namespace Ogasela.Application.Promotions.GetPromotionPlans;
 
 public sealed record PromotionPlanResponse(
     Guid Id,
-    PromotionPlanName Name,
+    string Name,
+    string? Description,
+    IReadOnlyList<string> Features,
     int DurationDays,
     int PhotoLimit,
     bool VideoAllowed,
@@ -13,4 +15,9 @@ public sealed record PromotionPlanResponse(
     AiToolTier AiToolTier,
     bool AdPlatformPushAllowed,
     int BundledAdCreditKobo,
-    bool IsActive);
+    bool IsActive)
+{
+    public static PromotionPlanResponse From(PromotionPlan p) => new(
+        p.Id, p.Name, p.Description, p.Features, p.DurationDays, p.PhotoLimit, p.VideoAllowed, p.BoostWeight, p.Price,
+        p.AiToolTier, p.AdPlatformPushAllowed, p.BundledAdCreditKobo, p.IsActive);
+}

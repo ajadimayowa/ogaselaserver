@@ -11,4 +11,5 @@ public sealed record CreateCategoryCommand(
     int AttributeSchemaVersion,
     Stream? Image,
     string? ImageFileName,
-    string? ImageContentType) : IRequest<Result<CategoryResponse>>;
+    string? ImageContentType,
+    IReadOnlyList<string> SubcategoryNames) : IRequest<Result<CategoryResponse>>;

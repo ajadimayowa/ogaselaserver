@@ -27,7 +27,7 @@ public class NotificationDispatchTests : IClassFixture<ReviewsAndNotificationsAp
     public async Task ListingTransitioningToExpiringSoon_NotifiesTheSellerOnEveryEnabledChannel()
     {
         var sellerClient = await RegisterAndVerifySellerAsync(_factory);
-        var listing = await CreateAndPublishFreeListingAsync(sellerClient, CategorySeedData.ElectronicsId);
+        var listing = await CreateAndPublishFreeListingAsync(sellerClient, CategorySeedData.PhonesAndTabletsId);
 
         await BackdateToExpiringSoonAndRunJobAsync(listing.Id);
 
@@ -41,7 +41,7 @@ public class NotificationDispatchTests : IClassFixture<ReviewsAndNotificationsAp
     public async Task AUserWithAChannelDisabled_DoesNotReceiveANotificationOnThatChannel()
     {
         var sellerClient = await RegisterAndVerifySellerAsync(_factory);
-        var listing = await CreateAndPublishFreeListingAsync(sellerClient, CategorySeedData.ElectronicsId);
+        var listing = await CreateAndPublishFreeListingAsync(sellerClient, CategorySeedData.PhonesAndTabletsId);
 
         var preferencesResponse = await sellerClient.PutAsJsonAsync(
             "/api/v1/notifications/preferences",

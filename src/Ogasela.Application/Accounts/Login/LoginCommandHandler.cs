@@ -62,6 +62,12 @@ public sealed class LoginCommandHandler : IRequestHandler<LoginCommand, Result<L
             return Result.Failure<LoginOtpSentResponse>(AccountErrors.MfaRequired);
         }
 
+        // Only after the password checked out, so this can't be used to probe which accounts are suspended.
+        if (user.IsSuspended)
+        {
+            return Result.Failure<LoginOtpSentResponse>(AccountErrors.AccountSuspended);
+        }
+
         if (string.IsNullOrWhiteSpace(user.Phone))
         {
             return Result.Failure<LoginOtpSentResponse>(AccountErrors.MfaPhoneRequired);

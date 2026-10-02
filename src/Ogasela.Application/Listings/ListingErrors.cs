@@ -53,4 +53,16 @@ public static class ListingErrors
 
     public static readonly Error PaymentFailed = new(
         "Listing.PaymentFailed", "Payment for the selected plan was not authorized.");
+
+    public static readonly Error Incomplete = new(
+        "Listing.Incomplete", "Finish your ad first - it needs a title, description and at least one photo.");
+
+    public static readonly Error PlanNotOnSale = new(
+        "Listing.PlanNotOnSale", "That promotion plan isn't available any more. Choose another.");
+
+    public static readonly Error PaymentNotFound = new(
+        "Listing.PaymentNotFound", "We couldn't find that payment for this ad.");
+
+    public static readonly Error UnsupportedImage = new(
+        "Listing.UnsupportedImage", "That photo's format isn't supported. Use a JPEG, PNG or WebP photo.");
 }

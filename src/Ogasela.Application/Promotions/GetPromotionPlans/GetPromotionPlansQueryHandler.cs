@@ -18,12 +18,13 @@ public sealed class GetPromotionPlansQueryHandler
     public async Task<Result<IReadOnlyList<PromotionPlanResponse>>> Handle(
         GetPromotionPlansQuery request, CancellationToken cancellationToken)
     {
-        var plans = await _dbContext.PromotionPlans
-            .OrderBy(p => p.BoostWeight)
-            .Select(p => new PromotionPlanResponse(
-                p.Id, p.Name, p.DurationDays, p.PhotoLimit, p.VideoAllowed, p.BoostWeight, p.Price,
-                p.AiToolTier, p.AdPlatformPushAllowed, p.BundledAdCreditKobo, p.IsActive))
-            .ToListAsync(cancellationToken);
+        // A price ladder, cheapest first - the order sellers compare plans in (not newest first).
+        var plans = (await _dbContext.PromotionPlans
+                .OrderBy(p => p.Price)
+                .ThenBy(p => p.Name)
+                .ToListAsync(cancellationToken))
+            .Select(PromotionPlanResponse.From)
+            .ToList();
 
         return Result.Success<IReadOnlyList<PromotionPlanResponse>>(plans);
     }

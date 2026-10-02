@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Ogasela.Domain.Accounts;
+using Ogasela.Domain.Analytics;
 using Ogasela.Domain.AdIntegrations;
 using Ogasela.Domain.Geo;
 using Ogasela.Domain.Listings;
@@ -24,6 +25,26 @@ public interface IApplicationDbContext
     DbSet<SellerProfile> SellerProfiles { get; }
 
     DbSet<RefreshToken> RefreshTokens { get; }
+
+    DbSet<ExternalLogin> ExternalLogins { get; }
+
+    DbSet<ListingDailyStat> ListingDailyStats { get; }
+
+    DbSet<SellerDailyStat> SellerDailyStats { get; }
+
+    DbSet<Announcement> Announcements { get; }
+
+    DbSet<InboxNotification> InboxNotifications { get; }
+
+    DbSet<UserDocument> UserDocuments { get; }
+
+    DbSet<ProfileChangeRequest> ProfileChangeRequests { get; }
+
+    DbSet<Dispute> Disputes { get; }
+
+    DbSet<Ogasela.Domain.Settings.PlatformSetting> PlatformSettings { get; }
+
+    DbSet<DisputeMessage> DisputeMessages { get; }
 
     DbSet<BiometricVerification> BiometricVerifications { get; }
 
